@@ -11,7 +11,12 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        //
+        // $middleware->alias([
+        //     'clockwork' => \Clockwork\Support\Laravel\ClockworkMiddleware::class,
+        // ]);
+
+        // Atau jika Anda ingin menambahkannya sebagai global middleware
+        // $middleware->append(\Clockwork\Support\Laravel\ClockworkMiddleware::class);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
