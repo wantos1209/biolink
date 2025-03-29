@@ -1,8 +1,15 @@
 
 <div id="showaddpostimage" class="sec_modal" >
     <div class="modalcontainer ">
-        <form action={{ route('createpostimage') }} enctype="multipart/form-data" method="post">
-            @csrf
+        {{-- <form id="postImageForm" action={{ route('createpostimage') }} enctype="multipart/form-data" method="post"> --}}
+            <form id="postImageForm"
+                enctype="multipart/form-data"
+                method="POST"
+                data-create="{{ route('createpostimage') }}"
+                data-update="{{ route('updatepostimage') }}">
+                @csrf
+
+            {{-- <input type="hidden" name="_token" value="{{ csrf_token() }}"> --}}
             {{-- <div class="group-post p-32 rounded-sm mt-32 bg-white "> --}}
             <div class="formaddpostimage pb-80 bg-white ">
                 <div class="judul_modal flex-h-between">
@@ -25,12 +32,13 @@
                     </div>
                     
                 </div>
-                <div id="file-names" class="mt-12 px-6 ">No files chosen</div>
-
+                <pre  id="file-names" class="mt-12 px-6 ">No files chosen</pre>
+               
                 <div class="profiltext ">
+                    <input type="hidden" id="deskripsipostimage" name="idpostimage">
                     <textarea id="deskripsi"  name="deskripsi" cols="30" rows="1" placeholder="Tulis Keterangan" maxlength="150" required></textarea>
                 </div>
-                <button id="submitFormheader" class="btnsave saveadd bl-btn text-white absolute flexcenter" type="submit">
+                <button id="submitFormPostimage" class="btnsave saveadd bl-btn text-white absolute flexcenter" type="submit">
                     <span>Save</span> <span class="bl-circle-loader absolute hidden"></span>
                 </button>
                 {{-- <button class="btnsave bl-btn text-white relative flexcenter" type="submit">
@@ -43,154 +51,24 @@
 </div>
 
 <script>
-
-document.addEventListener('DOMContentLoaded', function () {
-            const images = document.querySelector('#images');
-            const previewContainer = document.querySelector('#image-preview-container'); 
-            const fileNameContainer = document.querySelector('#file-names'); 
-            const uploadForm = document.querySelector('#uploadForm');
-           
-            let allSelectedFiles = []; 
-        
-            images.addEventListener('change', function () {
-               
-                previewImages();
-            });
-        
-            function previewImages() {
-                let invalidFiles = 0;
-                const newFiles = Array.from(images.files);
-        
-                newFiles.forEach((file) => {
-                    if (!file.type.startsWith('image/')) {
-                        invalidFiles++;
-                        return;
-                    }
-        
-                    const fileExists = allSelectedFiles.some(
-                        existingFile => existingFile.name === file.name && existingFile.lastModified === file.lastModified
-                    );
-        
-                    if (!fileExists) {
-                        allSelectedFiles.push(file);
-                    }
-                });
-        
-                if (invalidFiles > 0) {
-                    alert(`${invalidFiles} file bukan gambar dan tidak ditambahkan.`);
-                }
-        
-                renderPreview();
-                updateFileNames();
-            }
-        
-            function renderPreview() {
-                
-                previewContainer.innerHTML = ''; 
-        
-                allSelectedFiles.forEach((file, index) => {
-                    const oFReader = new FileReader();
-
-                    const container = document.createElement('div');
-                    container.classList.add('image-preview');
-
-
-                    const imgElement = document.createElement('img');
-                    imgElement.classList.add('img-preview');
-                    imgElement.style.maxWidth = '150px';
-                    imgElement.style.margin = '5px';
-
-                    // Elemen label Delete (tanpa fungsi terlebih dahulu)
-                    const deleteLabel = document.createElement('label');
-                    deleteLabel.classList.add('delete-label');
-                    deleteLabel.textContent = 'Delete'; 
-                    
-                    oFReader.onload = function (oFREvent) {
-                        imgElement.src = oFREvent.target.result;
-                    };
-        
-                    deleteLabel.addEventListener('click', (event) => {
-                        event.preventDefault(); 
-                        event.stopPropagation();  
-                        allSelectedFiles = allSelectedFiles.filter(
-                            f => f.name !== file.name || f.lastModified !== file.lastModified
-                        );
-        
-                        renderPreview();
-                        updateFileNames();
-                        updateFormFiles();
-                    });
-                  
-                    oFReader.readAsDataURL(file);
-
-                    container.appendChild(imgElement);
-                    container.appendChild(deleteLabel);
-                    previewContainer.appendChild(container);
-
-                });
-            }
- 
-            function updateFileNames() {
-                fileNameContainer.innerHTML = ''; 
-        
-                allSelectedFiles.forEach((file) => {
-                    const fileNameElement = document.createElement('div');
-                    fileNameElement.textContent = file.name;
-                    fileNameContainer.appendChild(fileNameElement);
-                });
-            }
-        
-            function updateFormFiles() {
-                const dataTransfer = new DataTransfer();
-        
-                allSelectedFiles.forEach((file) => {
-                    dataTransfer.items.add(file);
-                });
-        
-                images.files = dataTransfer.files; 
-            }
-        
-            uploadForm.addEventListener('submit', function () {
-                updateFormFiles(); 
-            });
-        });
-  
-
-
-
-
-// function copyToClipboard() {
-//     const textToCopy = document.getElementById('copyText').innerText;
-
-//     // Cek apakah navigator.clipboard didukung
-//     if (navigator.clipboard && navigator.clipboard.writeText) {
-//         navigator.clipboard.writeText(textToCopy).then(() => {
-//             showSuccessMessage();
-//         }).catch(err => {
-//             console.error('Gagal menyalin teks: ', err);
-//         });
-//     } else {
-//         // Fallback untuk browser lama
-//         const tempInput = document.createElement('input');
-//         tempInput.value = textToCopy;
-//         document.body.appendChild(tempInput);
-//         tempInput.select();
-//         try {
-//             document.execCommand('copy');
-//             showSuccessMessage();
-//         } catch (err) {
-//             console.error('Fallback: Gagal menyalin teks', err);
-//         }
-//         document.body.removeChild(tempInput);
-//     }
-// }
-
-// // Fungsi untuk menampilkan notifikasi sukses
-// function showSuccessMessage() {
-//     const successMessage = document.getElementById('copySuccess');
-//     successMessage.style.display = 'block';
-//     setTimeout(() => {
-//         successMessage.style.display = 'none';
-//     }, 2000);
-// }
+    document.getElementById("submitFormPostimage").addEventListener("click", function (event) {
+        const form = document.getElementById("postImageForm");
+        const deskripsi = document.getElementById("deskripsi").value.trim();
+        const idpostimage = document.getElementById("deskripsipostimage").value.trim();
+        const errorElement = form.querySelector(".error-message");
+    
+        errorElement.style.display = "none";
+    
+        if (!deskripsi || deskripsi.length < 1) {
+            event.preventDefault();
+            return showErrorMessage("Deskripsi wajib diisi.", errorElement);
+        }
+    
+        const routeCreate = form.getAttribute("data-create");
+        const routeUpdate = form.getAttribute("data-update");
+    
+        form.action = idpostimage ? routeUpdate : routeCreate;
+    
+    });
+    
 </script>

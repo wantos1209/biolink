@@ -122,7 +122,6 @@
 function copyToClipboard() {
     const textToCopy = document.getElementById('copyText').innerText;
 
-    // Cek apakah navigator.clipboard didukung
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(textToCopy).then(() => {
             showSuccessMessage();
@@ -130,7 +129,6 @@ function copyToClipboard() {
             console.error('Gagal menyalin teks: ', err);
         });
     } else {
-        // Fallback untuk browser lama
         const tempInput = document.createElement('input');
         tempInput.value = textToCopy;
         document.body.appendChild(tempInput);
@@ -145,7 +143,6 @@ function copyToClipboard() {
     }
 }
 
-// Fungsi untuk menampilkan notifikasi sukses
 function showSuccessMessage() {
     const successMessage = document.getElementById('copySuccess');
     successMessage.style.display = 'block';

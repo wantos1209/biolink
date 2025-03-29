@@ -1,6 +1,3 @@
-{{-- @extends('layouts.main')
-@section('content') --}}
-
 <div id="showaddsocials" class="sec_modal" >
     <div class="modalcontainer">
         <form id="socialsForm">
@@ -33,12 +30,12 @@
                             <span></span>
                             <input type="hidden" id="idInput" name="idsocial">
                             <input type="hidden" id="TitleInput" name="title">
-                            <input class="mt-5 mb-5" id="Urlnput" type="text" name="url" placeholder="URL (https://domain/youraccount)">
+                            <input class="mt-5 mb-5" id="Urlnput" type="text" name="url" >
                             <input type="hidden" id="svgInput" name="svg">
                         </div>
                     </div>
                 </div>
-
+                {{-- <a href="{{ route('createsocials') }}">save33333333</a> --}}
                 <button id="submitFormsocials" class="btnsave saveadd bl-btn text-white absolute flexcenter" type="submit">
                     <span>Save</span></span> <span class="bl-circle-loader absolute hidden"></span>
                 </button>
@@ -48,62 +45,3 @@
         </form>
     </div>
 </div>
-<script>
-
-//     document.getElementById("submitFormsocials").addEventListener("click", function (event) {
-//         event.preventDefault(); // Mencegah reload halaman
-
-//         const form = document.getElementById("socialsForm");
-//         const formData = new FormData(form);
-//         const errorMessage = document.getElementById("Error");
-
-//         const url = formData.get("url").trim();
-//         if (url.length < 1) {
-//             showErrorMessage("Nama link wajib diisi.");
-//             return;
-//         }
-//         if (!isValidUrl(url)) {
-//             showErrorMessage("Format URL tidak valid.");
-//             return;
-//         }
-//         form.submit();
-//     });
-// });  
-
-
-// function copyToClipboard() {
-//     const textToCopy = document.getElementById('copyText').innerText;
-
-//     // Cek apakah navigator.clipboard didukung
-//     if (navigator.clipboard && navigator.clipboard.writeText) {
-//         navigator.clipboard.writeText(textToCopy).then(() => {
-//             showSuccessMessage();
-//         }).catch(err => {
-//             console.error('Gagal menyalin teks: ', err);
-//         });
-//     } else {
-//         // Fallback untuk browser lama
-//         const tempInput = document.createElement('input');
-//         tempInput.value = textToCopy;
-//         document.body.appendChild(tempInput);
-//         tempInput.select();
-//         try {
-//             document.execCommand('copy');
-//             showSuccessMessage();
-//         } catch (err) {
-//             console.error('Fallback: Gagal menyalin teks', err);
-//         }
-//         document.body.removeChild(tempInput);
-//     }
-// }
-
-// // Fungsi untuk menampilkan notifikasi sukses
-// function showSuccessMessage() {
-//     const successMessage = document.getElementById('copySuccess');
-//     successMessage.style.display = 'block';
-//     setTimeout(() => {
-//         successMessage.style.display = 'none';
-//     }, 2000);
-// }
-</script>
-{{-- @endsection --}}

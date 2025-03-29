@@ -1,10 +1,9 @@
-<div>
-
+<div class="group-header sortable-list">
     <div class="group-settings p-32 rounded-sm mt-32 bg-white">
         <div class="child-profil radius-4 pb-24">
             <span>Themes</span>
         </div>
-        <div class="grid gap-y-24 gap-x-32 grid-cols-3">
+        <div class="grid gap-y-24 sec-thema gap-x-32 grid-cols-3">
             {{-- <div data-v-248aa77f="" class="ring-0"> --}}
                 <div class="group-theme {{ $selectedTheme === 'Basics' ? 'btn-selected' : '' }}">
                     <div class="child-theme theme-style br-grey cursor-pointer" style="--theme-background: #FFFFFF; --theme-btn-radius: 30px; --theme-btn-bg: #FFFFFF; --theme-btn-border: 0px solid #FFFFFF; --theme-font-family: 'Inter', sans-serif;"  wire:click="changeThema('Basics')"><!----> 
@@ -273,30 +272,3 @@
     </div> 
 </div>
 @endif
-<script>
-
-
-// Pilih semua elemen dengan kelas .group-theme
-// document.addEventListener('DOMContentLoaded', function () {
-//     const themes = document.querySelectorAll('.group-theme');
-
-//     themes.forEach(theme => {
-//         theme.addEventListener('click', function () {
-//             // Hapus btn-selected dari semua elemen
-//             themes.forEach(t => t.classList.remove('btn-selected'));
-
-//             // Tambahkan btn-selected ke elemen yang diklik
-//             this.classList.add('btn-selected');
-//         });
-//     });
-// });
-
-    // document.addEventListener("DOMContentLoaded", function() {
-    //     Livewire.hook('message.processed', () => {
-    //         document.getElementById('colorPicker').addEventListener('input', function() {
-    //             let selectedColor = this.value; // Ambil nilai warna yang dipilih
-    //             Livewire.emit('updateColorLive', selectedColor); // Kirim event ke Livewire
-    //         });
-    //     });
-
-</script>

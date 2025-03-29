@@ -19,6 +19,7 @@
 
 //     return false;
 // }
+
 function isColorOrImage($value)
 {
     // Jika path mengarah ke file gambar

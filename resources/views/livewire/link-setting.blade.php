@@ -180,9 +180,6 @@ document.addEventListener("DOMContentLoaded", function () {
         animation: 150,
         handle: ".dragable",
         onEnd: function (evt) {
-            console.log("🟢 Item dipindahkan:");
-            console.log("Dari index:", evt.oldIndex, "Ke index:", evt.newIndex);
-
             let allItems = document.querySelectorAll(".sortable-item");
             let positions = [];
 
@@ -193,12 +190,9 @@ document.addEventListener("DOMContentLoaded", function () {
                     position: index + 1
                 });
             });
-            console.log("🔄 Mengirim data posisi ke Livewire:", positions);
 
-            // ✅ PASTIKAN LIVEWIRE TERSEDIA SEBELUM EMIT
             function ensureLivewireLoaded(callback) {
                 if (typeof Livewire !== "undefined" && typeof Livewire.dispatch === "function") {
-                    console.log("🟢 Livewire siap, mengirim event...");
                     callback();
                 } else {
                     console.warn("⏳ Livewire belum ter-load, mencoba lagi...");
@@ -207,7 +201,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
 
             ensureLivewireLoaded(() => {
-                console.log("🟢 Livewire siap, mengirim event...");
                Livewire.dispatch('updateOrder', { positions });
             });
         }

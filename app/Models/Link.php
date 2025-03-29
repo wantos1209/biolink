@@ -11,6 +11,7 @@ class Link extends Model
 
     protected $fillable = [
         'profil_id', 
+        'section',
         'position',
         'title', 
         'url', 

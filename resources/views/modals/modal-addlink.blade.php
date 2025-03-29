@@ -23,7 +23,6 @@
                     </div>
                     <div class="addlinkimg align-center ml-24">
                         <div class="profil-addlink  relative">
-                            {{-- @if (is_null($user['profil'][0]['image'])) --}}
                             <div class="custom-img-addlink flexcenter cursor-pointer">
                             <input type="file" id="profile-img-upload" accept="image/*" class="p-b-wrap absolute opacity-0 cursor-pointer" name="images"  onchange="previewImages();">
                             <div>
@@ -31,26 +30,6 @@
                                 <div class="text-blLGrey font-inter text-10 text-center mt-8">Picture</div>
                             </div>
                             </div>
-                            {{-- @else
-                            <div class="img-addlink">
-                                <div>
-                                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="cursor-pointer delete-icon">
-                                        <circle cx="12" cy="12" r="11" fill="#0D0C22" stroke="white" stroke-width="2"></circle> 
-                                        <g clip-path="url(#clip0)">
-                                            <path d="M15.7766 8.21582L8.86487 15.1275" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path> 
-                                            <path d="M15.7823 15.1347L8.86487 8.21582" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-                                        </g> 
-                                        <defs>
-                                            <clipPath id="clip0">
-                                                <rect width="10.3784" height="10.3784" fill="white" transform="translate(7.13513 6.48633)"></rect>
-                                            </clipPath>
-                                        </defs>
-                                    </svg>
-                                </div>
-                                <img src="/img/metting.png" alt="" class="">
-                                <input type="hidden" name="old_image" value="{{ $user['profil'][0]['image'] }}">
-                            </div>
-                            @endif --}}
                         </div>
                     </div>
                 </div>
@@ -68,12 +47,10 @@
                    
                         <span class="sec_label">Embed is</span>
                         <div class="sec_togle">
-                            {{-- Gunakan ID unik untuk setiap switch berdasarkan ID link --}}
                             <input type="checkbox" id="switch-embed" 
                                     class="switch-embed" 
                                     data-id="">
                             <label for="switch-embed" class="sec_switch"></label>
-                            {{-- Input hidden untuk menyimpan status --}}
                             <input type="hidden" name="hidesocials" id="hiddenStatus" value="off">
                         </div>
                 </div>
@@ -82,7 +59,6 @@
             <button id="submitFormlink" class="btnsave saveadd bl-btn text-white absolute flexcenter" type="submit" >
                     <span>Save</span></span> <span class="bl-circle-loader absolute hidden"></span>
                 </button>
-                {{-- <p class="error-message text-red-500 hidden"></p> --}}
                 <div class="error-message" style="display: none; color: red;"></div>
             </div>
             
@@ -96,16 +72,14 @@ document.addEventListener("DOMContentLoaded", function () {
     const container = document.querySelector('.profil-addlink');
     const deleteIcon = document.querySelector('.delete-icon');
 
-    // Jika tombol hapus (SVG) ada, tambahkan event listener
     if (deleteIcon) {
         deleteIcon.addEventListener('click', function () {
             const profilImgDiv = document.querySelector('.img-addlink');
             event.stopPropagation();
             if (profilImgDiv) {
-                profilImgDiv.remove(); // Hapus elemen gambar
+                profilImgDiv.remove();
             }
 
-            // Tampilkan kembali input file
             const customImgDiv = document.createElement('div');
             customImgDiv.classList.add('custom-img-addlink','flexcenter','cursor-pointer');
 
@@ -129,36 +103,27 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 function previewImages() {
     const fileInput = document.getElementById('profile-img-upload');
-    const container = document.querySelector('.profil-addlink'); // Tempat menampilkan gambar
-
-    // Hapus preview gambar sebelumnya (jika ada)
+    const container = document.querySelector('.profil-addlink');
     const existingPreview = container.querySelector('.img-addlink');
     if (existingPreview) {
         existingPreview.remove();
     }
 
-    const file = fileInput.files[0]; // Ambil file pertama
+    const file = fileInput.files[0];
 
     if (file) {
-        // Validasi apakah file adalah gambar
         const validImageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'];
         if (!validImageTypes.includes(file.type)) {
             alert('Hanya file gambar yang diperbolehkan (JPEG, PNG, GIF, WEBP, SVG)');
-            fileInput.value = ""; // Reset input file
-            return; // Hentikan fungsi jika file bukan gambar
+            fileInput.value = ""; 
+            return; 
         }
 
         const reader = new FileReader();
-        // Saat file berhasil dibaca
         reader.onload = function(e) {
-            // Buat elemen div untuk profil-img
             const profilImgDiv = document.createElement('div');
             profilImgDiv.classList.add('img-addlink');
 
-            // Buat ikon SVG (ikon hapus atau edit)
-            // const svgIcon = `
-            //const svgWrapper = document.createElement('div');
-            //svgWrapper.innerHTML = `
             const svgIcon = document.createElement('div');
             svgIcon.innerHTML = `
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="cursor-pointer">
@@ -171,33 +136,27 @@ function previewImages() {
                 </svg>
             `;
 
-            // Ambil elemen SVG dari wrapper untuk menambahkan event listener
-            // const svgIcon = svgWrapper.firstElementChild;
 
             svgIcon.addEventListener('click', function () {
                 event.stopPropagation();
-                profilImgDiv.remove(); // Hapus gambar
-                fileInput.value = "";  // Reset input file
+                profilImgDiv.remove();
+                fileInput.value = ""; 
             });
             event.stopPropagation();
-            // Buat elemen gambar dan set source-nya
             const imgElement = document.createElement('img');
-            imgElement.src = e.target.result; // Set source dari file reader
+            imgElement.src = e.target.result;
             imgElement.alt = "Preview";
             imgElement.name = "img";
-            //imgElement.style.maxWidth = "100px"; // Atur ukuran gambar
-     
-            // Tambahkan ikon dan gambar ke dalam profil-img div
+
             profilImgDiv.appendChild(svgIcon);
             // profilImgDiv.innerHTML = svgIcon;
             profilImgDiv.appendChild(imgElement);
-          
-            // Tambahkan div ke container
+            
             container.appendChild(profilImgDiv);
 
         };
 
-        reader.readAsDataURL(file); // Baca file sebagai Data URL
+        reader.readAsDataURL(file); 
     }
 }
 

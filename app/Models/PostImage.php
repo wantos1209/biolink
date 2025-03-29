@@ -11,6 +11,7 @@ class PostImage extends Model
 
     protected $fillable = [
         'profil_id',
+        'section',
         'position', 
         'deskripsi', 
         'hide', 

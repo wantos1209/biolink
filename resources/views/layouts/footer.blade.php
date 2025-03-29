@@ -1,5 +1,5 @@
 
-<div class="section bagfooter">
+<div class="section bagfooter bg-black">
     <div class="gridfooter">
         <div class="footerlist">
             <h3>Certified By</h3>
@@ -16,7 +16,7 @@
                 <a href="https://wa.me/6282131422849" target="_blank"><span><i class="fab fa-whatsapp"></i>Whatsapp</span></a>
                 <a href="https://direct.lc.chat/16851456/" target="_blank"><span><i class="far fa-comment-dots"></i>LiveChat</span></a>
                 <a href="mailto: admin@lotto21group.info"><span><i class="fas fa-envelope"></i>Email :
-                        admin@lotto21group.info</span></a>
+                    admin@lotto21group.info</span></a>
             </div>
         </div>
 
@@ -35,27 +35,22 @@
         <div class="footerlist">
             <h3>Quick Links</h3>
             <div class="listfootgame">
-                <a href="https://www.lotto21group.com/games"><span>Home</span></a>
-                <a href="https://www.lotto21group.com/rtp"><span>Rtp</span></a>
-                <a href="https://www.lotto21group.com/gallery"><span>Gallery</span></a>
-                <a href="https://www.lotto21group.com/tototools"><span>Toto Tools</span></a>
-                <a href="https://www.lotto21group.com/paito"><span>Paito</span></a>
-                <a href="https://www.lotto21group.com/about"><span>About Us</span></a>
-                <a href="https://www.lotto21group.com/contact"><span>Contact</span></a>
+                <a href="{{ Route('home') }}"><span>Home</span></a>
+                <a href="{{ Route('login') }}"><span>Login</span></a>
+                <a href="{{ Route('register') }}"><span>Register</span></a>
+                <a href="{{ Route('about') }}"><span>About</span></a>
             </div>
         </div>
 
         <div class="footerlist">
-            <h3>Games</h3>
+            <h3>About Us</h3>
             <div class="listfootgame">
-                <a href="https://www.lotto21group.com/games"><span>Togel</span></a>
-                <a href="https://www.lotto21group.com/games"><span>Slot</span></a>
-                <a href="https://www.lotto21group.com/games"><span>Live Games</span></a>
-                <a href="https://www.lotto21group.com/games"><span>Table Games</span></a>
-                <a href="https://www.lotto21group.com/games"><span>Sport Games</span></a>
-                <a href="https://www.lotto21group.com/games"><span>Fishing</span></a>
+                <a href="{{ Route('privacy') }}"><span>Privacy Policy</span></a>
+                <a href="{{ Route('terms') }}"><span>Terms of Service</span></a>
+                <a href="{{ Route('cookies') }}"><span>Cookie Policy</span></a>
+                <a href="{{ Route('privacy') }}"><span>Features</span></a>
             </div>
         </div>
     </div>
-    <div class="copyrightfoot">© Copyright 2010 - 2023 lotto21top All Rights Reserved.</div>
+    <div class="copyrightfoot">© Copyright 2025 <a href="https://www.lotto21group.com/games"><span class="underline">MYLINK21</span></a> All Rights Reserved.</div>
 </div>

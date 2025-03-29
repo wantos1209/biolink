@@ -24,17 +24,19 @@ use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 use PhpParser\Node\Expr\PostInc;
 use Illuminate\Support\Str;
+use Mews\Purifier\Facades\Purifier;
 class ProfilController extends Controller
 {
     //
     protected $images;
     protected $deleteimages;
     public function createdaftar(Request $request){
-       
+      
         $validator = Validator::make($request->all(), [
             'username' => 'required|unique:users,username|max:200',
             'email' => 'required|email|unique:users,email',
-            'password' => ['required', 'min:8', 'regex:/[A-Z]/'],
+            'password' => ['required', 'min:8','regex:/[a-z]/', 'regex:/[A-Z]/','regex:/[0-9]/'],
+            'konfirmasipassword' => 'required|same:password',
         ], [
             'username.required' => 'Username wajib diisi.',
             'username.unique' => 'Username sudah terdaftar.',
@@ -44,12 +46,12 @@ class ProfilController extends Controller
             'email.email' => 'Format email tidak valid.',
             'email.unique' => 'Username sudah terdaftar.',
 
-            // (?=.*[a-z]) → Minimal 1 huruf kecil.
-            // (?=.*[A-Z]) → Minimal 1 huruf besar.
-            // (?=.*\d) → Minimal 1 angka.
             'password.required' => 'Password wajib diisi.',
             'password.min' => 'Password minimal 8 karakter.',
-            'password.regex' => 'Password harus mengandung setidaknya 1 huruf besar.',
+            'password.regex' => 'Password harus mengandung huruf kecil, huruf besar, dan angka.',
+
+            'konfirmasipassword.required' => 'Konfirmasi password wajib diisi.',
+            'konfirmasipassword.same' => 'Konfirmasi password tidak cocok dengan password.',
         ]);
        
        if ($validator->fails()) {
@@ -67,7 +69,6 @@ class ProfilController extends Controller
             ]);
             Auth::login($user);
             return redirect()->route('profil')->with('success', 'Register berhasil! Data berhasil disimpan.');
-            // return back()->with('success', 'Pendaftaran berhasil');
 
         } catch (\Exception $e) {
         
@@ -76,15 +77,22 @@ class ProfilController extends Controller
     }
 public function uploadImage(Request $request) 
 {
-    // if ($request->hasFile('image')) {
-    //     $file = $request->file('image');
-    //     $path = $file->store('uploads/quill', 'public'); // Simpan di storage/app/public/uploads/quill
-    //     // Format path agar hanya menyimpan relatif path
-    //     $relativePath = "/storage/" . $path;
-    //     return response()->json(['url' => $relativePath]);
-    //     // return response()->json(['url' => asset('storage/' . $path)]);
-    // }
-    // return response()->json(['error' => 'Gagal mengunggah gambar'], 400);
+ 
+    $validator = Validator::make($request->all(), [
+        'image' => 'required|image|mimes:jpeg,png,jpg,gif,webp|max:10240',
+    ], [
+        'image.required' => 'Gambar wajib diunggah.',
+        'image.image' => 'File harus berupa gambar.',
+        'image.mimes' => 'Format gambar harus JPEG, PNG, JPG, GIF atau WEBP.',
+        'image.max' => 'Ukuran gambar maksimal 10MB.',
+    ]);
+
+    if ($validator->fails()) {
+        return response()->json([
+            "success" => false,
+            "errors" => $validator->errors()
+        ], 422);
+    }
     $profil = Profil::with('postimage')->where('user_id', Auth::id())->where('status', 'on')->first();
 
     if (!$profil) {
@@ -92,18 +100,31 @@ public function uploadImage(Request $request)
     }
 
     if ($request->hasFile('image')) {
-
-        //$userId = auth()->id(); // Ambil ID pengguna yang sedang login
         $file = $request->file('image');
-        // Simpan di storage/app/public/uploads/{id_profil}
         $path = $file->store("postblog/{$profil->id}", 'public');
-        // Format path agar hanya menyimpan relatif path
         $relativePath = "/storage/" . $path;
         return response()->json(['url' => $relativePath]);
     }
 
-    return response()->json(['error' => 'Gagal mengunggah gambar'], 400);
+    if ($request->hasFile('image')) {
+        $file = $request->file('image');
+    
+ 
+        $mime = $file->getMimeType();
+        if (!in_array($mime, ['image/jpeg', 'image/png', 'image/gif', 'image/webp'])) {
+            $content = Purifier::clean($request->input('content')); 
+            return response()->json([
+                'error' => 'Tipe file tidak valid',
+                'cleaned_content' => $content 
+            ], 400);
+        }
+        $path = $file->store("postblog/{$profil->id}", 'public');
+        $relativePath = "/storage/" . $path;
+        return response()->json(['url' => $relativePath]);
+
+    }
 }
+
 public function deleteImage(Request $request)
 {
     $imagePath = str_replace('/storage/', '', $request->image);
@@ -115,9 +136,93 @@ public function deleteImage(Request $request)
 
     return response()->json(['error' => 'Gambar tidak ditemukan'], 404);
 }
+    public function updatepostimage(Request $request) {
+     
 
+        try {
+            
+            $validator = Validator::make($request->all(), [
+                'idpostimage' => 'required|exists:post_images,id',
+                'deskripsi' => 'required|string|max:255',
+                'images.*' => 'file|mimes:jpeg,png,jpg,gif,webp|max:10240',
+            ], [
+                'deskripsi.required' => 'deskripsi wajib diisi.',
+                'deskripsi.max' => 'title maksimal 255 karakter.',
+                'images.*.file' => 'Terdapat file yang tidak valid.', 
+                'images.*.mimes' => 'format: JPEG, PNG, JPG, GIF dan WEBP yang diizinkan.',
+                'images.*.max' => 'Ukuran file maksimal adalah 10MB.', 
+            ]);
+
+            if ($validator->fails()) {
+                return redirect()->back()
+                    ->withErrors($validator)
+                    ->withInput();
+                    }
+
+            $profil = Profil::with('postimage')->where('user_id', Auth::id())->where('status', 'on')->first();
+    
+            if (!$profil) {
+                return redirect()->back()->with("error", "Profil tidak ditemukan.");
+            }
+
+            $postimg = PostImage::with('imageposts')->where('id', $request->idpostimage)->where('profil_id', $profil->id)->firstOrFail();
+           
+            $oldImages = $postimg->imageposts->pluck('image')->toArray();
+         
+            $newFileNames = [];
+            if ($request->file('images')) {
+                foreach ($request->file('images') as $img) {
+                    $image = new \Imagick($img->getPathname());
+                    $image->setImageFormat('webp');
+                    $image->setImageCompressionQuality(80);
+                    $image->stripImage();
+                    $image->resizeImage(800, 0, \Imagick::FILTER_LANCZOS, 1);
+
+                    $fileName = time() . '_' . uniqid() . '.webp';
+                    $image->writeImage(storage_path('app/public/img/' . $fileName));
+
+                    $newFileNames[] = $fileName;
+
+                    ImagePost::create([
+                        'postimage_id' => $postimg->id,
+                        'image' => $fileName,
+                    ]);
+
+                    $image->clear();
+                    $image->destroy();
+                }
+            }
+            $datapostimage = $request->has('datapostimage') ? $request->datapostimage : [];
+
+            $imagesToDelete = array_diff($oldImages, $datapostimage);
+          
+                if (!empty($imagesToDelete)) {
+                    foreach ($imagesToDelete as $filename) {
+
+                        $filename = basename($filename);
+
+                        $filePath = storage_path('app/public/img/' . $filename);
+                        if (file_exists($filePath)) {
+              
+                            Storage::disk('public')->delete('img/' . $filename);
+                        }
+                       
+                        ImagePost::where('postimage_id', $postimg->id)->where('image', $filename)->delete();
+                    }
+                }
+                $postimg->update([
+                    'deskripsi' => $request->deskripsi
+                ]);
+                
+
+            return redirect()->back()->with('success', 'Post berhasil disimpan!');
+
+        } catch (\Exception $e) {
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
     public function createpostimage(Request $request) {
-        // dd(session()->get('dataimg')['id']);
+
         try {
             $validator = Validator::make($request->all(), [
                 'deskripsi' => 'required|string|max:255',
@@ -125,9 +230,9 @@ public function deleteImage(Request $request)
             ], [
                 'deskripsi.required' => 'deskripsi wajib diisi.',
                 'deskripsi.max' => 'title maksimal 255 karakter.',
-                'images.*.file' => 'Terdapat file yang tidak valid.', // Pesan jika file tidak valid
-                'images.*.mimes' => 'format: JPEG, PNG, JPG, GIF dan WEBP yang diizinkan.', // Pesan jika tipe file tidak valid
-                'images.*.max' => 'Ukuran file maksimal adalah 10MB.', // Pesan jika ukuran file terlalu besar
+                'images.*.file' => 'Terdapat file yang tidak valid.',
+                'images.*.mimes' => 'format: JPEG, PNG, JPG, GIF dan WEBP yang diizinkan.',
+                'images.*.max' => 'Ukuran file maksimal adalah 10MB.', 
             ]);
 
             if ($validator->fails()) {
@@ -147,7 +252,6 @@ public function deleteImage(Request $request)
             ->orderByRaw("CAST(SUBSTRING_INDEX(position, ' ', -1) AS UNSIGNED) DESC")
             ->value('position');
           
-            // Ekstrak angka dari format 'custom 1', 'custom 2', dst.
             $nextPosition = 1;
             if ($maxHeaderPos) {
                 preg_match('/\d+$/', $maxHeaderPos, $matches);
@@ -157,13 +261,14 @@ public function deleteImage(Request $request)
             $postimg = PostImage::create([
                 'profil_id' => $profil->id,
                 'position' => "cuspimg $nextPosition",
+                'section' => 'postimage',
                 'deskripsi' => $request->deskripsi,
                 'hide' => true,
                 'created_at' => now(),
             ]);
          
             if ($request->file('images')) {
-                    $filePaths = []; // Array untuk menyimpan path file
+                    $filePaths = []; 
                     foreach ($request->file('images') as $img) {
                     
                         $image = new \Imagick($img->getPathname()); 
@@ -175,13 +280,12 @@ public function deleteImage(Request $request)
                         
                         $fileName = time() . '_' . uniqid() . '.webp';
                         $directoryPath = storage_path('app/public/img');
-                        // Buat folder jika belum ada
+
                         if (!file_exists($directoryPath)) {
                             mkdir($directoryPath, 0755, true);
                         }
-                        // Simpan file ke direktori
                         $filePath = $directoryPath . '/' . $fileName;
-                        $image->writeImage($filePath); // Simpan gambar ke path
+                        $image->writeImage($filePath); 
 
                         $filePaths[] = [
                             'postimage_id' => $postimg->id,
@@ -189,7 +293,7 @@ public function deleteImage(Request $request)
                             'created_at' => now(),
                         ];
                         $image->clear();
-                        $image->destroy(); // Hapus dari memori untuk optimasi
+                        $image->destroy(); 
                     } 
                     ImagePost::insert($filePaths);
 
@@ -201,9 +305,10 @@ public function deleteImage(Request $request)
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
-
+    
+ 
     public function createblog(Request $request) {
-   
+
         try {
             $validator = Validator::make($request->all(), [
                 'title' => 'required|string|max:255',
@@ -220,132 +325,85 @@ public function deleteImage(Request $request)
                 ->withInput();
                 }
             
-                // $content = $request->input('content');
-                // // Ambil semua gambar yang ada di dalam konten
-                // preg_match_all('/<img.*?src="(.*?)"/', $content, $matches);
-                // $usedImages = $matches[1] ?? [];
-                // // Ubah path relatif agar cocok dengan penyimpanan di storage
-                // $usedImages = array_map(function ($image) {
-                //     return str_replace('/storage/', '', $image);
-                // }, $usedImages);
-                // // Ambil semua gambar di storage
-                // $storedImages = Storage::disk('public')->files('uploads/quill');
-                // // Cari gambar yang tidak digunakan dalam konten
-                // $unusedImages = array_diff($storedImages, $usedImages);
-                // // Hapus gambar yang tidak digunakan
-                // foreach ($unusedImages as $image) {
-                //     Storage::disk('public')->delete($image);
-                // }
-            
 
             $profil = Profil::with('postblog')->where('user_id', Auth::id())->where('status', 'on')->first();
 
             if (!$profil) {
                 return response()->json(['success' => false, 'message' => 'Profil tidak ditemukan.']);
             }
+             
 
+            $cleanContent = Purifier::clean($request->input('content'), 'quill');
+
+            preg_match_all('/<img.*?src="(.*?)"/', $cleanContent, $matches);
+            $usedImages = array_map(fn($img) => str_replace('/storage/', '', $img), $matches[1] ?? []);
+    
+            $previousImages = [];
+            foreach ($profil->postblog->pluck('deskripsi') as $postContent) {
+                preg_match_all('/<img.*?src="(.*?)"/', $postContent, $matches);
+                $previousImages = array_merge($previousImages, $matches[1] ?? []);
+            }
+            $previousImages = array_map(fn($img) => str_replace('/storage/', '', $img), $previousImages);
+    
+            $allUsedImages = array_unique(array_merge($previousImages, $usedImages));
+            $storedImages = Storage::disk('public')->files("postblog/{$profil->id}");
+            $unusedImages = array_diff($storedImages, $allUsedImages);
+    
+            foreach ($unusedImages as $image) {
+                Storage::disk('public')->delete($image);
+            }
+    
+            if (empty(Storage::disk('public')->files("postblog/{$profil->id}"))) {
+                Storage::disk('public')->deleteDirectory("postblog/{$profil->id}");
+            }    
+
+        if ($request->filled('idpostblog')) {
+            $blog = PostBlog::where('id', $request->idpostblog)->where('profil_id', $profil->id)->firstOrFail();
+            $blog->update([
+                'title' => $request->title,
+                'deskripsi' => $cleanContent,
+            ]);
+        } else {
             $baseSlug = Str::slug($request['title']); 
 
             $validslug = $profil->postblog->where('slug', $baseSlug)->first();
             if ($validslug) {
-                // Jika sudah ada, cari slug dengan penomoran yang sesuai
+
                 $counter = 2;
                 while ($profil->postblog->where('slug', $baseSlug . '-' . $counter)->first()) {
                     $counter++;
                 }
-                $slug = $baseSlug . '-' . $counter; // Tambahkan nomor jika sudah ada
+                $slug = $baseSlug . '-' . $counter;
             } else {
-                $slug = $baseSlug; // Jika belum ada, gunakan slug dasar tanpa nomor
+                $slug = $baseSlug;
             }
-           
-            // $generatenumber = $validslug ? $validslug + 1 : 1; 
-            // $slug =  Str::slug($request['title']) . '-' . $generatenumber; 
-            // $validslug ? Str::slug($request['title']) . '-' . time(); 
-            // $lastPosition = Link::where('profil_id', $newProfil->id)->max('position');
-            // $nextPosition = $lastPosition ? $lastPosition + 1 : 1; // Jika kosong, mulai dari 1
 
-            // $userId = auth()->id(); // Ambil ID user
-            $content = $request->input('content');
-           
-                // Ambil semua gambar yang ada di dalam konten baru
-            preg_match_all('/<img.*?src="(.*?)"/', $content, $matches);
-            $usedImages = $matches[1] ?? [];
-            // Ubah path relatif agar cocok dengan penyimpanan di storage
-            $usedImages = array_map(function ($image) {
-                return str_replace('/storage/', '', $image);
-            }, $usedImages);
-            // **Ambil semua gambar dari konten post sebelumnya milik user ini**
-            $previousPosts = $profil->postblog->pluck('deskripsi');
-        
-            $previousImages = [];
-            foreach ($previousPosts as $postContent) {
-                preg_match_all('/<img.*?src="(.*?)"/', $postContent, $matches);
-                $previousImages = array_merge($previousImages, $matches[1] ?? []);
-            }
-            // Ubah path relatif untuk gambar sebelumnya juga
-            $previousImages = array_map(function ($image) {
-                return str_replace('/storage/', '', $image);
-            }, $previousImages);
-            // **Gabungkan gambar yang baru dengan gambar yang sudah digunakan sebelumnya**
-            $allUsedImages = array_unique(array_merge($previousImages, $usedImages));
-            // Ambil semua gambar dalam folder user
-            $storedImages = Storage::disk('public')->files("postblog/{$profil->id}");
-            // Cari gambar yang benar-benar tidak digunakan dalam semua post user ini
-            $unusedImages = array_diff($storedImages, $allUsedImages);
-            // Hapus gambar yang tidak digunakan
-            foreach ($unusedImages as $image) {
-                Storage::disk('public')->delete($image);
-            }
-            // Hapus folder user jika kosong
-            if (count(Storage::disk('public')->files("postblog/{$profil->id}")) === 0) {
-                Storage::disk('public')->deleteDirectory("postblog/{$profil->id}");
-            }
-            // Ambil semua gambar yang ada di dalam konten
-            // preg_match_all('/<img.*?src="(.*?)"/', $content, $matches);
-            // $usedImages = $matches[1] ?? [];
-            // // Ubah path relatif agar cocok dengan penyimpanan di storage
-            // $usedImages = array_map(function ($image) {
-            //     return str_replace('/storage/', '', $image);
-            // }, $usedImages);
-            // // Ambil semua gambar hanya dalam folder user
-            // $storedImages = Storage::disk('public')->files("uploads/{$profil->id}");
-            // // Cari gambar yang tidak digunakan dalam konten
-            // $unusedImages = array_diff($storedImages, $usedImages);
-            // // Hapus gambar yang tidak digunakan
-            // foreach ($unusedImages as $image) {
-            //     Storage::disk('public')->delete($image);
-            // }
-            // // Hapus folder user jika kosong
-            // if (empty(Storage::disk('public')->files("uploads/{$profil->id}"))) {
-            //     Storage::disk('public')->deleteDirectory("uploads/{$profil->id}");
-            // }
-           
             $maxHeaderPos = PostBlog::where('profil_id', $profil->id)
             ->where('position', 'LIKE', 'cusblog%')
             ->orderByRaw("CAST(SUBSTRING_INDEX(position, ' ', -1) AS UNSIGNED) DESC")
             ->value('position');
             
-            // Ekstrak angka dari format 'custom 1', 'custom 2', dst.
             $nextPosition = 1;
             if ($maxHeaderPos) {
                 preg_match('/\d+$/', $maxHeaderPos, $matches);
                 $nextPosition = $matches ? intval($matches[0]) + 1 : 1;
             }
-            // $fileName = $this->images($request->file('images'));
+        
             PostBlog::create([
-                // 'image' => $fileName,
                 'profil_id' => $profil->id,
                 'position' => "cusblog $nextPosition",
+                'section' => 'postblog',
                 'title' => $request->title,
                 'slug' => $slug,
-                'deskripsi' => $request->content,
+                'deskripsi' => $cleanContent,
                 'hide' => true,
             ]);
-
-            return response()->json(['success' => true, 'message' => 'Data berhasil disimpan!']);
-        } catch (\Exception $e) {
-            return response()->json(['success' => false, 'message' => 'Terjadi kesalahan saat menyimpan data.']);
         }
+            return redirect()->back()->with('success', 'Blog berhasil disimpan!');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+
     }
     public function updatePosition(Request $request)
     {
@@ -354,8 +412,12 @@ public function deleteImage(Request $request)
         foreach ($positions as $position) {
             if ($position['type'] == 'header') {
                 Header::where('id', $position['id'])->update(['position' => $position['position']]);
-            } else {
+            } elseif ($position['type'] == 'link') {
                 Link::where('id', $position['id'])->update(['position' => $position['position']]);
+            } elseif ($position['type'] == 'postimage') {
+                PostImage::where('id', $position['id'])->update(['position' => $position['position']]);
+            } elseif ($position['type'] == 'postblog') {
+                PostBlog::where('id', $position['id'])->update(['position' => $position['position']]);
             }
         }
     
@@ -365,13 +427,10 @@ public function deleteImage(Request $request)
     public function switchaccount(Request $request, $id)
     {
      
-        // Update status profil: set semua 'off' kecuali yang sesuai dengan $id
         Profil::where('user_id', Auth::id())->update([
             'status' => DB::raw("CASE WHEN id = $id THEN 'on' ELSE 'off' END")
         ]);
 
-        // Ambil data profil yang baru diaktifkan
-        // $profil = Profil::where('id', $id)->first();
         $id =  Auth::user()->id;
         $user = User::with('profil')->where('id', $id)->firstOrFail();
 
@@ -380,55 +439,101 @@ public function deleteImage(Request $request)
             return redirect()->back()->with("error", "Profil tidak ditemukan.");
         }
 
-        // Regenerate session tanpa menghapus seluruh session
-    //    session()->forget('profil');
-    //    session()->forget('dataimg');
-    //    session()->put('profil',  $user['profil']->toArray());
-    //    session()->put('dataimg',  $user['profil']->where('status', 'on')->toArray());
-    //    session()->regenerateToken();
-        
         return redirect()->back()->with("success", "Profil berhasil diperbarui!");
     }
 
     public function createprofil(Request $request){
 
         try { 
-
-            $request->validate([
+        
+             $validator = Validator::make($request->all(), [
                 'nama' => 'required|string|min:3',
                 'bio' => 'nullable|string', 
                 'images.*' => 'file|mimes:jpeg,png,jpg,gif,webp|max:10240',
                 'namalink' => 'required|array',
                 'namalink.*' => 'required|string|max:20',
                 'url' => 'required|array',
-                'url.*' => 'required|url|max:255',
+                'url.*' => 'required|url|max:255|distinct',
             ], [
-                'images.*.file' => 'Terdapat file yang tidak valid.', // Pesan jika file tidak valid
-                'images.*.mimes' => 'format: JPEG, PNG, JPG, GIF dan WEBP yang diizinkan.', // Pesan jika tipe file tidak valid
-                'images.*.max' => 'Ukuran file maksimal adalah 10MB.', // Pesan jika ukuran file terlalu besar
+                'images.*.file' => 'Terdapat file yang tidak valid.', 
+                'images.*.mimes' => 'format: JPEG, PNG, JPG, GIF dan WEBP yang diizinkan.',
+                'images.*.max' => 'Ukuran file maksimal adalah 10MB.', 
                 
                 'nama.required' => 'Nama Profil wajib diisi.',
                 'nama.min' => 'Nama Profil minimal 3 karakter.',
 
                 'namalink.required' => 'Nama link wajib diisi.',
-                'namalink.max' => 'Nama link maksimal 20 karakter.',
+                'namalink.*.required' => 'Nama link wajib diisi.',
+                'namalink.*.max' => 'Nama link maksimal 20 karakter.',
 
                 'url.required' => 'URL wajib diisi.',
-                'url.url' => 'Format URL tidak valid.',
-                'url.max' => 'URL maksimal 255 karakter.',
+                'url.*.required' => 'URL wajib diisi.',
+                'url.*.url' => 'Format URL tidak valid.',
+                'url.*.max' => 'URL maksimal 255 karakter.',
+                'url.*.distinct' => 'Setiap URL harus berbeda.',
             ]);
-            // $user = Auth::user(); User::find($id);
-            // $user = user::all()->firstOrFail();
+            $validator->after(function ($validator) use ($request) {
+                $urls = $request->input('url', []);
+                $namalinks = $request->input('namalink', []);
+            
+                $dupes = array_keys(array_filter(array_count_values($urls), function ($count) {
+                    return $count > 1;
+                }));
+            
+                foreach ($urls as $i => $url) {
+                    if (in_array($url, $dupes)) {
+                        $label = $namalinks[$i] ?? "Link ke-" . ($i + 1);
+                        $validator->errors()->add("url.$i", "URL untuk \"$label\" harus berbeda.");
+                    }
+                }
+            });
+            
+            if ($validator->fails()) {
+                    if ($request->hasFile('images')) {
+                        $file = $request->file('images');
+                        $tempFileName = $file->hashName();
+                        $file->storeAs('temp_images', $tempFileName, 'public');
+
+                        session(['old_image' => 'temp_images/' . $tempFileName]);
+                    }
+                return redirect()->back()
+                    ->withErrors($validator)
+                    ->withInput();
+                    }
+
             $user = Auth::user();
         
             $statusnew = Profil::where('user_id', $user->id)->exists();
-            // $statusnew = Profil::where('user_id', $user->id)->count();
-            // dd($user);
-            // $job = new Datauser();
-            // $this->dispatch($job);
-            $fileName = $this->images($request->file('images'));
+
+            $fileName = null;
+
+            if ($request->hasFile('images')) {
+
+                $file = $request->file('images');
+                $tempFileName = $file->hashName();
+                $file->storeAs('temp_images', $tempFileName, 'public');
+                session(['old_image' => 'temp_images/' . $tempFileName]);
+
+                $fileName = $this->images($file);
+
+            } elseif (session()->has('old_image')) {
+
+                $oldImagePath = session('old_image');
+
+                if (Storage::disk('public')->exists($oldImagePath)) {
+
+                    $absolutePath = Storage::disk('public')->path($oldImagePath);
+
+                    $file = new \Illuminate\Http\File($absolutePath);
+
+                    $fileName = $this->images($file);
+
+                    Storage::disk('public')->delete($oldImagePath);
+                    session()->forget('old_image');
+                }
+            }
+            
             DB::transaction(function () use ($user, $request, $fileName) {
-            // Update semua profil user menjadi "off"
             Profil::where('user_id', $user->id)->where('status', 'on')->update(['status' => 'off']);
                 $newProfil = Profil::create([
                     'user_id' => $user->id,
@@ -436,24 +541,14 @@ public function deleteImage(Request $request)
                     'bio' => $request->bio,
                     'image' => $fileName,
                     'status' => "on",
-                    // 'created_at' => now(),
-                    // 'updated_at' => now(),
+
                 ]);
-            // $request->url as $url
-            // Simpan link jika ada
-            // $lastPosition = Link::where('profil_id', $newProfil->id)->max('position');
-            // $nextPosition = $lastPosition ? $lastPosition + 1 : 1; // Jika kosong, mulai dari 1
-            //--------------------------------------------------------------------------------------------------
-            // $maxHeaderPos = Header::where('profil_id', $newProfil->id)->max('position');
-            // $maxLinkPos = Link::where('profil_id', $newProfil->id)->max('position');
-            // $nextPosition = max($maxHeaderPos, $maxLinkPos) ? max($maxHeaderPos, $maxLinkPos) + 1 : 1;
 
             $maxHeaderPos = Link::where('profil_id', $newProfil->id)
             ->where('position', 'LIKE', 'cuslink%')
             ->orderByRaw("CAST(SUBSTRING_INDEX(position, ' ', -1) AS UNSIGNED) DESC")
             ->value('position');
         
-            // Ekstrak angka dari format 'custom 1', 'custom 2', dst.
             $nextPosition = 1;
             if ($maxHeaderPos) {
                 preg_match('/\d+$/', $maxHeaderPos, $matches);
@@ -461,37 +556,34 @@ public function deleteImage(Request $request)
             }
 
             if ($request->namalink && $request->url) {
-                $filePaths = []; // Array untuk menyimpan link
+                $filePaths = []; 
                 foreach ($request->namalink as $index => $namalink) {
                     $filePaths[] = [
                         'profil_id' => $newProfil->id,
                         'title' => $namalink,
                         'url' => $request->url[$index],
                         'position' => "cuslink".' '. $nextPosition++,
+                        'section' => 'link',
                         'embed' => false,
                         'hide' => true,
                         'created_at' => now(),
-                        //'updated_at' => now(),
                     ];
                 }
                 Link::insert($filePaths);
             }
             Design::ChangeThema('', "Basics",$newProfil->id);
         });  
-        // session()->forget('profil');
-        // session()->forget('dataimg');
-        // session()->put('profil',  $user['profil']->toArray());
-        // session()->put('dataimg',  $user['profil']->where('status', 'on')->toArray());
-        // session()->regenerateToken();
-        // if ($statusnew > 0) {
+
         if ($statusnew) {
+
             return redirect()->route('links')->with('success', 'Data berhasil disimpan!');
         } else {
+
             return redirect()->route('links')->with('successwithcontent', 'Selamat untuk Pengguna Baru!');
         }
-            // return redirect()->route('profil')->with('success', 'Register berhasil! Data berhasil disimpan.');
-        } catch (\Exception $e) {
 
+        } catch (\Exception $e) {
+           
             return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan data.')->withInput();
         }    
     }
@@ -505,7 +597,6 @@ public function deleteImage(Request $request)
             return response()->json(['success' => false, 'message' => 'Profil tidak ditemukan.']);
         }
 
-        // ✅ 1. Cek Duplikasi Link
         $existingLink = Link::where('profil_id', $profil->id)
                             ->where('url', trim($request->url))
                             ->first();
@@ -514,21 +605,11 @@ public function deleteImage(Request $request)
             return response()->json(['success' => false, 'message' => 'Link sudah ada dalam database.']);
         }
 
-        // ✅ 2. Simpan Gambar Jika Ada
         $fileName = null;
         if ($request->hasFile('images')) {
             $fileName = $this->images($request->file('images'));
         }
-        // $lastPosition = Link::where('profil_id', $profil->id)->max('position');
-        // $nextPosition = $lastPosition ? $lastPosition + 1 : 1; // Jika kosong, mulai dari 1
-       // 🔥 Ambil posisi terbesar dari `headers` dan `links`
-        // $maxHeaderPos = Header::where('profil_id', $profil->id)->max('position');
-        // $maxLinkPos = Link::where('profil_id', $profil->id)->max('position');
-       
-        // // 🔥 Cari angka terbesar dari keduanya, lalu tambahkan 1
-        // $nextPosition = max($maxHeaderPos, $maxLinkPos) ? max($maxHeaderPos, $maxLinkPos) + 1 : 1;
-        
-        // ✅ 3. Pastikan Embed Bernilai Boolean
+
         $embedValue = ($request->embed === "on") ? true : false;
 
         $maxHeaderPos = Link::where('profil_id', $profil->id)
@@ -536,33 +617,25 @@ public function deleteImage(Request $request)
         ->orderByRaw("CAST(SUBSTRING_INDEX(position, ' ', -1) AS UNSIGNED) DESC")
         ->value('position');
     
-        // Ekstrak angka dari format 'custom 1', 'custom 2', dst.
         $nextPosition = 1;
         if ($maxHeaderPos) {
             preg_match('/\d+$/', $maxHeaderPos, $matches);
             $nextPosition = $matches ? intval($matches[0]) + 1 : 1;
         }
 
-        // ✅ 3. Simpan Data ke Database
         Link::create([
             'profil_id' => $profil->id,
             'title' => $request->title,
             'url' => $request->url,
             'image' => $fileName,
             'position' => "cuslink $nextPosition",
-            // 'embed' => $request->embed === "on", // 🔥 Simpan boolean
-            'embed' => $embedValue, // 🔥 Simpan sebagai boolean
+            'section' => 'link',
+            'embed' => $embedValue,
             'hide' => true,
         ]);
-
-    //     return redirect()->back()->with("success", "Data berhasil disimpan!");
-
-    // } catch (\Exception $e) {
-            
-    //     return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan data.')->withInput();
-    // }   
+  
         return response()->json(['success' => true, 'message' => 'Data berhasil disimpan!']);
-    
+       
     } catch (\Exception $e) {
         return response()->json(['success' => false, 'message' => 'Terjadi kesalahan saat menyimpan data.']);
     }
@@ -570,7 +643,7 @@ public function deleteImage(Request $request)
 public function updatelink(Request $request)
 {
     try {
-        \Log::info("Updating ID: Data:", $request->all());
+
         $user = Auth::user();
         $profil = Profil::where('user_id', $user->id)->where('status', 'on')->first();
 
@@ -578,7 +651,7 @@ public function updatelink(Request $request)
             return response()->json(['success' => false, 'message' => 'Profil tidak ditemukan.']);
         }
         $embedValue = ($request->embed === "on") ? true : false;
-        // ✅ 1. Cek Duplikasi Link
+
         $existingLink = Link::where('profil_id', $profil->id)
                             ->where("title", $request->title)
                             ->where('url', trim($request->url))
@@ -588,9 +661,6 @@ public function updatelink(Request $request)
         if ($existingLink && !$request->hasFile('images')) {
             return response()->json(['success' => false, 'message' => 'Link dengan title yang sama sudah ada dalam database.']);
         }
-
-        // ✅ 2. Simpan Gambar Jika Ada
-    
 
         $Link = Link::where('profil_id', $profil->id)->findOrFail($request->idlink);
 
@@ -605,7 +675,7 @@ public function updatelink(Request $request)
         $updateData = [
             'title' => $request->title,
             'url' => $request->url,
-            'embed' => $embedValue, // Simpan sebagai boolean
+            'embed' => $embedValue,
         ];
         if ($fileName) {
             $updateData['image'] = $fileName;
@@ -619,64 +689,7 @@ public function updatelink(Request $request)
         return response()->json(['success' => false, 'message' => 'Terjadi kesalahan saat menyimpan data.']);
     }
 }
-    // public function creatlink(Request $request){
 
-    //     try { 
-
-    //         // ✅ 1. Validasi Input
-    //         $request->validate([
-    //             'images' => 'nullable|file|mimes:jpeg,png,jpg,gif,webp|max:10240',
-    //             'title' => 'required|string|max:20',
-    //             'url' => 'required|url|max:255',
-    //         ], [
-    //             'images.file' => 'File tidak valid.',
-    //             'images.mimes' => 'Format yang diizinkan: JPEG, PNG, JPG, GIF, WEBP.',
-    //             'images.max' => 'Ukuran file maksimal 10MB.',
-
-    //             'title.required' => 'Nama link wajib diisi.',
-    //             'title.max' => 'Nama link maksimal 20 karakter.',
-
-    //             'url.required' => 'URL wajib diisi.',
-    //             'url.url' => 'Format URL tidak valid.',
-    //             'url.max' => 'URL maksimal 255 karakter.',
-    //         ]);
-    //         // ✅ 2. Ambil User & Profil Aktif
-    //         $user = Auth::user();
-    //         $profil = Profil::where('user_id', $user->id)->first(); // Ambil profil pertama user
-
-    //         if (!$profil) {
-    //             return redirect()->back()->with('error', 'Profil tidak ditemukan.')->withInput();
-    //         }
-
-    //         // ✅ 3. Cek Apakah Link dengan URL yang Sama Sudah Ada di Profil Ini
-    //         $existingLink = Link::where('profil_id', $profil->id)
-    //         ->where('url', $request->url)
-    //         ->first();
-
-    //         if ($existingLink) {
-    //         return redirect()->back()->with('error', 'Link sudah ada dalam database.')->withInput();
-    //         }
-    //         // ✅ 4. Upload Gambar Jika Ada
-    //         $fileName = null;
-    //         if ($request->hasFile('images')) {
-    //             $fileName = $this->images($request->file('images'));
-    //         }
-
-    //         // ✅ 5. Simpan Data ke Database
-    //         Link::create([
-    //             'profil_id' => $profil->id,
-    //             'title' => $request->title,
-    //             'url' => $request->url,
-    //             'image' => $fileName,
-    //             'hide' => 'on',
-    //         ]);
-
-    //         return redirect()->route('links')->with('success', 'Data berhasil disimpan!');
-    
-    //     } catch (\Exception $e) {
-    //         return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan data.')->withInput();
-    //     } 
-    // }
     public function deleteprofil(Request $request, $id)
     {
         try {
@@ -691,30 +704,12 @@ public function updatelink(Request $request)
                 return redirect()->back()->with("error", "Profil tidak ditemukan.");
             }
 
-            // Hapus gambar jika ada
             if ($profil->image && Storage::disk('public')->exists('img/' . $profil->image)) {
                 Storage::disk('public')->delete('img/' . $profil->image);
             }
-            // if ($profil['image'] && file_exists(public_path('storage/img/' . $profil['image']))) {
-            //     unlink(public_path('storage/img/' .  $profil['image']));
-            // }
+
             $profil->delete();
 
-        // **Perbarui session dengan data terbaru setelah penghapusan**
-        //  session()->forget('profil');
-        //  session()->forget('dataimg');
-
-        // Ambil profil terbaru yang masih aktif
-        // $newProfil = Profil::where('user_id', $user->id)->where('status', 'on')->first();
-        // $newDataImg = Profil::where('user_id', $user->id)->where('status', 'on')->get()->toArray();
-        // // Simpan ke session hanya jika ada data baru
-        // if ($newProfil) {
-        //     session()->put('profil', $newProfil->toArray());
-        // }
-        // if (!empty($newDataImg)) {
-        //     session()->put('dataimg', $newDataImg);
-        // }
-        // session()->regenerateToken();
         
             return redirect()->back()->with('success', "Data berhasil dihapus!");
 
@@ -737,8 +732,6 @@ public function updatelink(Request $request)
     
             return response()->json([
                 'message' => 'Data berhasil dihapus!',
-                // 'id' => $update->id,
-                //'hide' => $update->hide
             ], 200);
         } catch (\Exception $e) {
             \Log::error("Data Delete Error:", ['error' => $e->getMessage()]);
@@ -757,8 +750,6 @@ public function updatelink(Request $request)
     
             return response()->json([
                 'message' => 'Data berhasil dihapus!',
-                // 'id' => $update->id,
-                //'hide' => $update->hide
             ], 200);
         } catch (\Exception $e) {
             \Log::error("Data Delete Error:", ['error' => $e->getMessage()]);
@@ -777,8 +768,79 @@ public function updatelink(Request $request)
     
             return response()->json([
                 'message' => 'Data berhasil dihapus!',
-                // 'id' => $update->id,
-                //'hide' => $update->hide
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error("Data Delete Error:", ['error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Terjadi kesalahan server.',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function deletepostimage(Request $request, $id)
+    {
+        try {
+        
+            $deletepostimage = PostImage::with('ImagePost')->findOrFail($id);
+            $deleteimage = $deletepostimage->ImagePost->first();
+            if ($deleteimage['image'] && file_exists(public_path('storage/img/' . $deleteimage['image']))) {
+                unlink(public_path('storage/img/' .  $deleteimage['image']));
+            }
+            $deletepostimage->delete();
+
+            return response()->json([
+                'message' => 'Data berhasil dihapus!',
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error("Data Delete Error:", ['error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Terjadi kesalahan server.',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function deletepostblog(Request $request, $id)
+    {    
+        try {
+            $profil = Profil::with('postblog')->where('user_id', Auth::id())->where('status', 'on')->first();
+            if (!$profil) {
+                return response()->json(['error' => 'Profil tidak ditemukan.'], 404);
+            }
+            $deletepostblog = $profil->postblog->find($id);
+           
+            if (!$deletepostblog) {
+                return response()->json(['error' => 'Post blog tidak ditemukan.'], 404);
+            }
+            
+            $deletepostblog->delete();
+
+            $profil->load('postblog');
+
+            $previousPosts = $profil->postblog->pluck('deskripsi');
+            $previousImages = [];
+   
+            foreach ($previousPosts as $postContent) {
+                preg_match_all('/<img.*?src="(.*?)"/', $postContent, $matches);
+                $previousImages = array_merge($previousImages, $matches[1] ?? []);
+            }
+    
+            $previousImages = array_map(function ($image) {
+                return str_replace('/storage/', '', $image);
+            }, $previousImages);
+           
+            $storedImages = Storage::disk('public')->files("postblog/{$profil->id}");
+            
+            $unusedImages = array_diff($storedImages, $previousImages);
+       
+            foreach ($unusedImages as $image) {
+                Storage::disk('public')->delete($image);
+            }
+          
+            if (count(Storage::disk('public')->files("postblog/{$profil->id}")) === 0) {
+                Storage::disk('public')->deleteDirectory("postblog/{$profil->id}");
+            }
+            return response()->json([
+                'message' => 'Data berhasil dihapus!',
             ], 200);
         } catch (\Exception $e) {
             \Log::error("Data Delete Error:", ['error' => $e->getMessage()]);
@@ -792,18 +854,10 @@ public function updatelink(Request $request)
     {
         try {
         
-           // Log::info("Request diterima:", $id); // Debugging
-           \Log::info("Updating ID: $id, Data:", $request->all());
-            // Validasi request
             $request->validate([
                 'hide' => 'required|string|in:on,off',
             ]);
-            // $header = Header::find($id);
-            // if (!$header) {
-            //     return response()->json(['error' => 'Data tidak ditemukan.'], 404);
-            // }
-            // Update status berdasarkan ID
-            // Konversi nilai "on" ke true dan "off" ke false
+
             $hideValue = $request->hide === 'on' ? true : false;
 
             $update = Link::findOrFail($id);
@@ -812,7 +866,6 @@ public function updatelink(Request $request)
             return response()->json([
                 'message' => 'Status berhasil diperbarui!',
                 'id' => $update->id,
-                //'hide' => $update->hide
             ], 200);
         } catch (\Exception $e) {
             \Log::error("Update Status Error:", ['error' => $e->getMessage()]);
@@ -825,18 +878,11 @@ public function updatelink(Request $request)
     public function hideheader(Request $request, $id)
     {
         try {
-            // Log::info('Updating ID', ['id' => $id, 'status' => $request->hide]);
 
-            // Validasi request
             $request->validate([
                 'hide' => 'required|string|in:on,off',
             ]);
-            // $header = Header::find($id);
-            // if (!$header) {
-            //     return response()->json(['error' => 'Data tidak ditemukan.'], 404);
-            // }
-            // Update status berdasarkan ID
-            // Konversi nilai "on" ke true dan "off" ke false
+
             $hideValue = $request->hide === 'on' ? true : false;
 
             $update = Header::findOrFail($id);
@@ -845,7 +891,56 @@ public function updatelink(Request $request)
             return response()->json([
                 'message' => 'Status berhasil diperbarui!',
                 'id' => $update->id,
-                // 'status' => $hideValue
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error("Update Status Error:", ['error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Terjadi kesalahan server.',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function hidepostimage(Request $request, $id)
+    {
+        try {
+        
+            $request->validate([
+                'hide' => 'required|string|in:on,off',
+            ]);
+   
+            $hideValue = $request->hide === 'on' ? true : false;
+
+            $update = PostImage::findOrFail($id);
+            $update->update(['hide' => $hideValue]);
+    
+            return response()->json([
+                'message' => 'Status berhasil diperbarui!',
+                'id' => $update->id,
+            ], 200);
+        } catch (\Exception $e) {
+            \Log::error("Update Status Error:", ['error' => $e->getMessage()]);
+            return response()->json([
+                'error' => 'Terjadi kesalahan server.',
+                'details' => $e->getMessage()
+            ], 500);
+        }
+    }
+    public function hidepostblog(Request $request, $id)
+    {
+        try {
+        
+            $request->validate([
+                'hide' => 'required|string|in:on,off',
+            ]);
+   
+            $hideValue = $request->hide === 'on' ? true : false;
+
+            $update = PostBlog::findOrFail($id);
+            $update->update(['hide' => $hideValue]);
+    
+            return response()->json([
+                'message' => 'Status berhasil diperbarui!',
+                'id' => $update->id,
             ], 200);
         } catch (\Exception $e) {
             \Log::error("Update Status Error:", ['error' => $e->getMessage()]);
@@ -858,10 +953,7 @@ public function updatelink(Request $request)
     public function hidesocial(Request $request, $id)
     {
         try {
-        
-           // Log::info("Request diterima:", $id); // Debugging
-           \Log::info("Updating ID: $id, Data:", $request->all());
-            // Validasi request
+
             $request->validate([
                 'hide' => 'required|string|in:on,off',
             ]);
@@ -874,7 +966,7 @@ public function updatelink(Request $request)
             return response()->json([
                 'message' => 'Status berhasil diperbarui!',
                 'id' => $update->id,
-            //    'status' => $hideValue
+
             ], 200);
         } catch (\Exception $e) {
             \Log::error("Update Status Error:", ['error' => $e->getMessage()]);
@@ -884,6 +976,7 @@ public function updatelink(Request $request)
             ], 500);
         }
     }
+    
     public function bloguser(Request $Request, $username, $blog){
 
     try {
@@ -921,40 +1014,19 @@ public function updatelink(Request $request)
             if (!preg_match('/^[a-zA-Z0-9._]{3,}$/', $username)) {
                 abort(404, 'Username tidak valid');
             }
-            // if (!filter_var($username, FILTER_VALIDATE_INT, ["options" => ["min_range" => 1]])) {
-            //     abort(404);
-            // }
-            // $profil = Profil::where('user_id', $id)
-            // ->where('status', 'on')
-            // ->firstOrFail();
-            // $settings = Design::getSetting($profil->id)->first();
-            //-----------------------------------
-            // $user = User::where('username', $username)->firstOrFail();
-            // $profil = Profil::with('Design') // jika relasi 'design' ada
-            //      ->where('user_id', $user->id)
-            //      ->where('status', 'on')
-            //      ->firstOrFail();
-            // $settings = $profil->design;
 
-            // Query User beserta relasi Profil dan Design dalam satu query
             $user = User::with(['profil' => function ($query) {
                 $query->where('status', 'on')
-                // ->with('link')
-                // ->with('design');
+
                 ->with(['link', 'design','header','socialmedia','postblog','postimage.imageposts']);
             }])->where('username', $username)->firstOrFail();
 
-            //$postimage = $user->profil->postimage;
-            
-            // Ambil profil aktif pertama
             $profil = $user->profil->first();
 
-            
             if (!$profil) {
                 abort(404, 'Profil tidak ditemukan atau tidak aktif');
             }
-              // Pastikan desain ada
-            // $design = $profil->design;
+
             if ($profil->design->isEmpty()) {
                 abort(404, 'Desain tidak ditemukan');
             }
@@ -963,11 +1035,13 @@ public function updatelink(Request $request)
                 $box_shadow = "0px 6px 14px -6px rgba(24, 39, 75, 0.12), 0px 10px 32px -4px rgba(24, 39, 75, 0.1), inset 0px 0px 2px 1px rgba(255, 255, 255, 0.05)" ;
             }
             $postimage = $profil->postimage;
-            
+
             $items = collect($profil->header)
             ->merge($profil->link)
+            ->merge($profil->postimage)
+            ->merge($profil->postblog)
             ->sortBy('position')
-            ->values(); // Reset indeks array
+            ->values();
 
             return view('user.user', compact('items'),[
                 'profil' => $profil,
@@ -977,7 +1051,6 @@ public function updatelink(Request $request)
                 'imageposts' => $postimage,
                 'social' => $profil->socialmedia,
                 'box_shadow' => $box_shadow ?? [],
-                // 'iconname' => 'Jadwal Saya',
                 'username' => $user->username,
             ]);
 
@@ -987,32 +1060,35 @@ public function updatelink(Request $request)
             return redirect()->back()->with('error', 'Terjadi kesalahan, coba lagi nanti.');
         }
     }
-    // Route::
+
     public function settings(Request $request) {
 
-            $id =  Auth::user()->id;
-            $user = User::with('profil')->where('id', $id)->firstOrFail();
+        $id =  Auth::user()->id;
+        $user = User::with(['profil' => function ($query) {
+            $query->where('status', 'on')
+            ->with(['link','header','postimage', 'postblog']);
+        }])->where('id', $id)->firstOrFail();
 
-        return view('main.setting',[
-            'user' => $user,
-        
-        ]);
+    $profil = $user->profil->first();
 
+    $items = collect($profil->header)
+                ->merge($profil->link)
+                ->merge($profil->postimage)
+                ->merge($profil->postblog)
+                ->sortBy('position')
+                ->values(); 
+
+                return view('main.setting', compact('profil', 'items'));
     }
+
     public function posts(Request $request) {
 
-     
-        // Cara mengambil profil dengan relasi nested (postimage dengan imageposts)
             $profil = Profil::with(['postimage.imageposts', 'postblog'])
             ->where('user_id', Auth::id())
             ->where('status', 'on')
             ->first();
           
-            // Ambil data postimage beserta relasi imageposts-nya dari profil
             $postimage = $profil->postimage;
-
-            // contoh mengakses imageposts dari postimage
-          //  $imageposts = $postimage ? $postimage->imageposts : collect();
 
         return view('main.postimage',[
             'postblog' => $profil['postblog'],
@@ -1023,71 +1099,81 @@ public function updatelink(Request $request)
     }
     public function createsocials(Request $request) {
         try {
-        // ✅ 1. Validasi Input
-        $validator = Validator::make($request->all(), [
-            "url" => "required|string",
-            "svg" => "required|string"
-        ], [
-            "url.required" => "Nama sosial media wajib diisi.",
-            // "url.max" => "Nama maksimal 50 karakter.",
-            "svg.required" => "Ikon sosial media tidak boleh kosong."
-        ]);
+
+        $rules = [
+            'title' => 'required|string',
+            'url' => 'required|string',
+            'svg' => 'required|string'
+        ];
+        
+        $messages = [
+            'title.required' => 'Nama sosial media wajib diisi.',
+            'url.required' => 'URL atau data wajib diisi.',
+            'svg.required' => 'Ikon sosial media tidak boleh kosong.',
+        ];
+        
+        $title = strtolower($request->input('title'));
+        
+        if (in_array($title, ['email', 'github', 'linkedin'])) {
+            $rules['url'] .= '|email';
+            $messages['url.email'] = 'Format email tidak valid.';
+        } elseif (in_array($title, ['whatsapp', 'telegram'])) {
+            $rules['url'] .= '|regex:/^\+62\d{9,15}$/';
+            $messages['url.regex'] = 'Nomor harus diawali dengan +62 dan minimal 9 digit.';
+        } else {
+            $rules['url'] .= '|url|max:255';
+            $messages['url.url'] = 'Format URL tidak valid.';
+            $messages['url.max'] = 'URL maksimal 255 karakter.';
+        }
+        
+        $validator = Validator::make($request->all(), $rules, $messages);
+        
         if ($validator->fails()) {
             return response()->json([
                 "success" => false,
                 "errors" => $validator->errors()
             ], 422);
         }
-        // if ($validator->fails()) {
-        //     return redirect()->back()
-        //         ->withErrors($validator)
-        //         ->withInput();
-        //         }
-        // ✅ 2. Ambil Profil yang Aktif
+
         $user = Auth::user();
         $profil = Profil::where('user_id', $user->id)->where('status', 'on')->first();
-    
+        
         if (!$profil) {
             return response()->json(['success' => false, 'message' => 'Profil tidak ditemukan.']);
-            // return redirect()->back()->with("error", "Profil tidak ditemukan atau tidak aktif.");
         }
-    
-        // ✅ 3. Cek Apakah Social Media Sudah Ada
-        $existingSocialMedia = $profil->socialmedia()->where('profil_id', $profil->id)
+        $socialMedia = $profil->socialmedia;
+        if ($socialMedia->count() >= 5) {
+            return response()->json(['success' => false, 'message' => 'Social media sudah melebihi batas.']);
+        }
+
+        $existingSocialMedia = $profil->socialmedia
                                     ->where("title", $request->title)
                                     ->where("url", $request->url)
                                     ->first();
+
         if ($existingSocialMedia) {
             return response()->json(['success' => false, 'message' => 'Social media sudah ada.']);
-            // return redirect()->back()->with("error", "Social media sudah ada.");
         }
        
-     
-        // ✅ 4. Simpan Data ke Database
         SocialMedia::create([
-            'profil_id' => $profil->id, // 🔥 Simpan dengan profil_id
+            'profil_id' => $profil->id, 
             'title' => $request->title,
             'url' => $request->url,
             'svg' => $request->svg,
             'hide' => true,
         ]);
-    
-        // return redirect()->back()->with("success", "Data berhasil disimpan!");
 
-        // } catch (\Exception $e) {
-                
-        //     return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan data.')->withInput();
-        // }    
         return response()->json(['success' => true, 'message' => 'Data berhasil disimpan!']);
     
     } catch (\Exception $e) {
+
         return response()->json(['success' => false, 'message' => 'Terjadi kesalahan saat menyimpan data.']);
     }
 
     }
     public function updatesocials(Request $request) {
         try {
-            // ✅ 1. Validasi Input
+
             $validator = Validator::make($request->all(), [
                 'idsocial' => 'required|integer|exists:social_media,id',
                 "title" => "required|string",
@@ -1107,15 +1193,13 @@ public function updatelink(Request $request)
                 ], 422);
             }
     
-            // ✅ 2. Ambil Profil yang Aktif
             $user = Auth::user();
             $profil = Profil::where('user_id', $user->id)->where('status', 'on')->first();
     
             if (!$profil) {
                 return response()->json(['success' => false, 'message' => 'Profil tidak ditemukan.'], 404);
             }
-    
-            // ✅ 3. Cek Apakah Social Media Sudah Ada
+
             $existingSocialMedia = SocialMedia::where('profil_id', $profil->id)
                                     ->where("title", $request->title)
                                     ->where("url", $request->url)
@@ -1125,10 +1209,8 @@ public function updatelink(Request $request)
                 return response()->json(['success' => false, 'message' => 'Social media sudah ada.'], 409);
             }
     
-            // ✅ 4. Cari Data Sosial Media Berdasarkan `profil_id` (Cegah update data lain)
             $social = SocialMedia::where('profil_id', $profil->id)->findOrFail($request->idsocial);
     
-            // ✅ 5. Simpan Data ke Database
             $social->update([
                 'title' => $request->title,
                 'url' => $request->url,
@@ -1150,77 +1232,56 @@ public function updatelink(Request $request)
     
     public function createheader(Request $request) {
         try {
-        // ✅ 1. Validasi Input
+
         $validator = Validator::make($request->all(), [
             "title" => "required|string"
         ], [
             "title.required" => "Title tidak boleh kosong."
         ]);
 
-        // if ($validator->fails()) {
-        //     return redirect()->back()
-        //         ->withErrors($validator)
-        //         ->withInput();
-        //         }
         if ($validator->fails()) {
             return response()->json([
                 "success" => false,
                 "errors" => $validator->errors()
             ], 422);
         }  
-        // ✅ 2. Ambil Profil yang Aktif
+
         $user = Auth::user();
         $profil = Profil::where('user_id', $user->id)->where('status', 'on')->first();
     
         if (!$profil) {
             return response()->json(['success' => false, 'message' => 'Profil tidak ditemukan.']);
-            // return redirect()->back()->with("error", "Profil tidak ditemukan atau tidak aktif.");
         }
     
-        // ✅ 3. Cek Apakah Social Media Sudah Ada
-        // $existingSocialMedia = $profil->socialmedia()->where('profil_id', $profil->id)
-        //                             ->where("title", $request->title)
-        //                             ->where("url", $request->url)
-        //                             ->first();
-        // if ($existingSocialMedia) {
-        //     return redirect()->back()->with("error", "Social media sudah ada.");
-        // }
         $maxHeaderPos = Header::where('profil_id', $profil->id)
         ->where('position', 'LIKE', 'cusher%')
         ->orderByRaw("CAST(SUBSTRING_INDEX(position, ' ', -1) AS UNSIGNED) DESC")
         ->value('position');
     
-        // Ekstrak angka dari format 'custom 1', 'custom 2', dst.
         $nextPosition = 1;
         if ($maxHeaderPos) {
             preg_match('/\d+$/', $maxHeaderPos, $matches);
             $nextPosition = $matches ? intval($matches[0]) + 1 : 1;
         }
 
-      
-        // ✅ 4. Simpan Data ke Database
         Header::create([
-            'profil_id' => $profil->id, // 🔥 Simpan dengan profil_id
+            'profil_id' => $profil->id,
             'position' => "cusher $nextPosition",
             'title' => $request->title,
+            'section' => 'header',
             'hide' => true,
         ]);
         return response()->json(['success' => true, 'message' => 'Data berhasil disimpan!']);
     
     } catch (\Exception $e) {
+
         return response()->json(['success' => false, 'message' => 'Terjadi kesalahan saat menyimpan data.']);
     }
-        // return redirect()->back()->with("success", "Data berhasil disimpan!");
-
-        // } catch (\Exception $e) {
-                
-        //     return redirect()->back()->with('error', 'Terjadi kesalahan saat menyimpan data.')->withInput();
-        // }    
 
     }
     public function updateheader(Request $request) {
         try {
-        // ✅ 1. Validasi Input
+
         $validator = Validator::make($request->all(), [
             "title" => "required|string"
         ], [
@@ -1233,13 +1294,11 @@ public function updatelink(Request $request)
                 "errors" => $validator->errors()
             ], 422);
         }  
-        // ✅ 2. Ambil Profil yang Aktif
         $user = Auth::user();
         $profil = Profil::where('user_id', $user->id)->where('status', 'on')->first();
     
         if (!$profil) {
             return response()->json(['success' => false, 'message' => 'Profil tidak ditemukan.']);
-            // return redirect()->back()->with("error", "Profil tidak ditemukan atau tidak aktif.");
         }
 
         $Header = Header::where('profil_id', $profil->id)->findOrFail($request->idheader);
@@ -1258,10 +1317,8 @@ public function updatelink(Request $request)
     public function accountsetting(Request $request) {
 
         $id =  Auth::user()->id;
-        $user = User::with(['profil' => function ($query) {
-            $query->where('status', 'on');
-        }])->where('id', $id)->firstOrFail();
-       
+        $user = User::with('profil')->where('id', $id)->firstOrFail();
+
         return view('main.accountsetting',[
             'user' => $user,
         ]);
@@ -1276,21 +1333,15 @@ public function updatelink(Request $request)
             $query->where('status', 'on')
             ->with(['link', 'design','header','socialmedia']);
         }])->where('id', $id)->firstOrFail();
-       // Ambil profil dengan relasi header & link
-    // $profil = Profil::with(['header', 'link'])->where('id', $profil_id)->firstOrFail();
-    $profil = $user->profil->first();
-   
-    // Gabungkan `headers` dan `links` lalu urutkan berdasarkan `position`
-    $items = collect($profil->header)
-                ->merge($profil->link)
-                ->sortBy('position')
-                ->values(); // Reset indeks array
-              //  dd( session()->all()); 
+
+        $profil = $user->profil->first();
+
+        $items = collect($profil->header)
+                    ->merge($profil->link)
+                    ->sortBy('position')
+                    ->values(); 
+             
                 return view('main.link', compact('profil', 'items'));
-                // return view('main.link', compact('profil'));
-        // return view('main.link',[
-        //     'user' => $user,
-        // ]);
 
     }
     public function updateprofil(Request $request) {
@@ -1304,20 +1355,16 @@ public function updatelink(Request $request)
             
             $profil = $user->profil->where('status', 'on')->firstOrFail();
 
-            // **Cek apakah ada file yang diunggah**
             $isNewImageUploaded = $request->hasFile('images');
     
-            // **Validasi Data**
             $validatorRules = [
                 'nama' => 'required|string|min:3',
                 'bio' => 'nullable|string',
             ];
     
             if (!$isNewImageUploaded) {
-                // **Jika tidak ada gambar baru, pastikan `old_image` ada**
                 $validatorRules['old_image'] = 'required|string';
             } else {
-                // **Jika ada gambar baru, validasi file gambar**
                 $validatorRules['images.*'] = 'file|mimes:jpeg,png,jpg,gif,webp|max:10240';
             }
     
@@ -1336,31 +1383,22 @@ public function updatelink(Request $request)
                 throw new ValidationException($validator);
             }
     
-            // **Jika ada file baru, simpan dan hapus gambar lama**
             if ($isNewImageUploaded) {
                 $fileName = $this->images($request->file('images'));
     
-                // **Hapus gambar lama jika ada**
                 if (!empty($profil->image) && file_exists(public_path('storage/img/' . $profil->image))) {
                     unlink(public_path('storage/img/' . $profil->image));
                 }
             } else {
-                // **Gunakan gambar lama jika tidak ada file baru**
                 $fileName = $request->old_image ?? $profil->image;
             }
 
-            // **Update profil user**
             $profil->update([
                 'nama' => $request->nama,
                 'bio' => $request->bio,
-                'image' => $fileName, // Gunakan gambar baru jika ada, jika tidak gunakan old_image
+                'image' => $fileName, 
             ]);
 
-            // session()->forget('profil');
-            // session()->forget('dataimg');
-            // session()->put('profil',  $user['profil']->toArray());
-            // session()->put('dataimg',  $user['profil']->where('status', 'on')->toArray());
-            // session()->regenerateToken();
 
             return redirect()->back()->with('success', 'Data berhasil diupdate!');
         } catch (ValidationException $e) {
@@ -1370,72 +1408,6 @@ public function updatelink(Request $request)
         }
     }
     
-    // public function updateprofil(Request $request) {
-  
-    // try{
-    //     $id =  Auth::user()->id;
-
-    //     $user = User::with(['profil' => function ($query) {
-    //         $query->where('status', 'on');
-    //     }])->where('id', $id)->firstOrFail();
-
-    //     if ($request->hasFile('images')) {
-    //         $validator = Validator::make($request->all(), [
-    //             'nama' => 'required|string|min:3',
-    //             'bio' => 'nullable|string', 
-    //             'images.*' => 'file|mimes:jpeg,png,jpg,gif,webp|max:10240',
-    //         ], [
-    //             'images.*.file' => 'Terdapat file yang tidak valid.', // Pesan jika file tidak valid
-    //             'images.*.mimes' => 'format: JPEG, PNG, JPG, GIF dan WEBP yang diizinkan.', // Pesan jika tipe file tidak valid
-    //             'images.*.max' => 'Ukuran file maksimal adalah 10MB.', // Pesan jika ukuran file terlalu besar
-                
-    //         ]);
-    //         if ($validator->fails()) {
-    //             throw new ValidationException($validator);
-    //         }
-    //         $fileName = $this->images($request->file('images'));
-
-    //         if ($user['profil'][0]->image && file_exists(public_path('storage/img/' . $user['profil'][0]->image))) {
-    //             unlink(public_path('storage/img/' .  $user['profil'][0]->image));
-    //         }
-    //     }
-
-    //     // $request->validate([
-    //     $validator = Validator::make($request->all(), [
-    //         'nama' => 'required|string|min:3',
-    //         'bio' => 'nullable|string', 
-    //         'old_image'=> 'required|string',
-    //     ], [
-    //         'old_image.required' => 'gambar tidak boleh kosong.',
-
-    //         'nama.required' => 'Nama Profil wajib diisi.',
-    //         'nama.min' => 'Nama Profil minimal 3 karakter.',
-
-    //         'namalink.required' => 'Nama link wajib diisi.',
-    //         'namalink.max' => 'Nama link maksimal 20 karakter.',
-    //     ]);
-    //     if ($validator->fails()) {
-    //         throw new ValidationException($validator);
-    //     }
-    //      $user->profil()->update([
-    //         'nama' => $request->nama,
-    //         'bio' => $request->bio,
-    //         'image' => $fileName ?? $request->old_image ?? $user['profil'][0]->image,
-    //     ]);
-
-    //     return redirect()->back()->with('success', 'data berhasil diupdate!');
-    //     // return redirect()->route('profil')->with('success', 'Register berhasil! Data berhasil disimpan.');
-
-    //     // catch (\Exception $e) {
-    //     } catch (ValidationException  $e) {
-    //         //  return back()->withErrors('error', 'Terjadi kesalahan saat menyimpan data.', $e->validator->errors())->withInput();
-    //         //    return back()->withErrors($e->validator->errors())->withInput();
-    //     return back()->with('error', $e->getMessage());
-    //         //    return back()->with('error', $e->getMessage());
-    //     }   
-
-    // }
-
     public function updateacount(Request $request) {
 
         $request->validate([
@@ -1444,7 +1416,6 @@ public function updatelink(Request $request)
         try {
             DB::beginTransaction();
            
-            // Mengunci baris user saat ini
             $id =  Auth::user()->id;
             $user = User::with(['profil' => function ($query) {
                 $query->where('status', 'on');
@@ -1470,7 +1441,6 @@ public function updatelink(Request $request)
         try {
             DB::beginTransaction();
            
-            // Mengunci baris user saat ini
             $id =  Auth::user()->id;
             $user = User::with(['profil' => function ($query) {
                 $query->where('status', 'on');
@@ -1491,8 +1461,8 @@ public function updatelink(Request $request)
     public function changepassword(Request $request) {
     try {
         $validator = Validator::make($request->all(), [
-            'old' => ['required', 'min:8', 'regex:/[A-Z]/'],
-            'new' => ['required', 'min:8', 'regex:/[A-Z]/'],
+            'old' => ['required', 'min:8','regex:/[a-z]/', 'regex:/[A-Z]/','regex:/[0-9]/'],
+            'new' => ['required', 'min:8','regex:/[a-z]/', 'regex:/[A-Z]/','regex:/[0-9]/'],
             'confirm' => 'required|same:new',
         ], [
       
@@ -1530,8 +1500,8 @@ public function updatelink(Request $request)
 
     }
     
-    public function login(Request $request)
-    {
+    public function login(Request $request) {
+        try {
         $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
@@ -1571,6 +1541,9 @@ public function updatelink(Request $request)
             return redirect()->route('profil');
         }
         return redirect()->route('links')->with('success', 'Login berhasil!');
+        } catch (\Exception $e) {   
+            return back()->withErrors(['error', 'Login failed: '  => 'Username atau password tidak terdaftar!']);
+        }  
     }
 
     public function logout(Request $request){
@@ -1581,54 +1554,43 @@ public function updatelink(Request $request)
         session()->flush();
         session()->regenerateToken();
 
-        return redirect()->route('login')->with('successlogout', 'Logout berhasil!');
+        return redirect()->route('home')->with('successlogout', 'Logout berhasil!');
     }
     
     public function images($file){
-        // Pastikan file ada
         if (!$file) {
             return null;
         }
 
         try {
-            // Buat objek gambar menggunakan Imagick
+
             $image = new \Imagick($file->getPathname());
 
-            // Set format gambar ke JPG
             $image->setImageFormat('jpg');
 
-            // Kompresi gambar dengan kualitas 80%
             $image->setImageCompression(\Imagick::COMPRESSION_JPEG);
             $image->setImageCompressionQuality(80);
 
-            // Hapus metadata untuk mengurangi ukuran file
             $image->stripImage();
 
-            // Resize gambar ke lebar 800px sambil menjaga aspek rasio
             $width = 800;
             $image->resizeImage($width, 0, \Imagick::FILTER_LANCZOS, 1);
 
-            // Buat nama file unik
             $fileName = time() . '_' . uniqid() . '.jpg';
 
-            // Tentukan direktori penyimpanan
             $directoryPath = storage_path('app/public/img');
             if (!file_exists($directoryPath)) {
                 mkdir($directoryPath, 0755, true);
             }
 
-            // Simpan gambar ke direktori
             $image->writeImage($directoryPath . '/' . $fileName);
 
-            // Bersihkan memori
             $image->clear();
             $image->destroy();
 
-            // Return nama file untuk disimpan di database
             return $fileName;
 
         } catch (\ImagickException $e) {
-            // Tangani error jika ada masalah dengan Imagick
             \Log::error('Imagick Error: ' . $e->getMessage());
             return null;
         }

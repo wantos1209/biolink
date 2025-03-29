@@ -1,4 +1,7 @@
 @if (session('success'))
+<script>
+    sessionStorage.setItem('success', "{{ session('success') }}");
+</script>
     <div id="shownotifsuccess" class="sec_content">
         <div class="modalcontainer">
             <div class="formnotif bg-white">
@@ -17,6 +20,9 @@
 @endif
 
 @if ($errors->any() || session('error'))
+<script>
+    sessionStorage.setItem('error', "{{ session('error') }}");
+</script>
 <div id="shownotifwrong" class="sec_content">
     <div class="modalcontainer">
         <div class="formnotif bg-white">
@@ -43,16 +49,25 @@
 @endif
 
 @if (session('successwithcontent'))
+<script>
+    sessionStorage.setItem('successwithcontent', "{{ session('successwithcontent') }}");
+</script>
 @include('modals.modal-content')
 @endif
 {{-- @dd(session()->all()) --}}
 {{-- @foreach (session('profil', []) as $getlink) --}}
-<section class="navbarlogin">
-    <div class="secnavbarlogin px-64 bg-white ">
+@if (Route::is('home'))
+<section class="navbarhome">
+    <div class="nav-home px-24 mx-auto nav-home py-16  bg-white">
         <a href="{{ env('API_URL') }}">
             <img class="image-nav m-auto" src="{{ env('API_URL') .'/storage/img/mylink.png' }}" alt="" role="presentation"></a>
-           
-            @if (Route::is('daftar'))
+           @else
+           <section class="navbarlogin">
+            <div class="secnavbarlogin px-64  bg-coklat">
+                <a href="{{ route('links') }}">
+                    <img class="image-nav m-auto" src="{{ env('API_URL') .'/storage/img/mylink.png' }}" alt="" role="presentation"></a>
+                @endif
+            @if (Route::is('register'))
                 <div class="text-14 align-center">
                 <span>Apakah kamu mempuyai account ? --></span>
                 <a href="{{ route('login') }}" class="text-blPrimary underline">Login</a>
@@ -60,7 +75,7 @@
                     @elseif (Route::is('login'))
                     <div class="text-14 align-center">
                         <span>Register Disini --></span>
-                        <a href="{{ route('daftar') }}" class="text-blPrimary underline">Daftar</a>
+                        <a href="{{ route('register') }}" class="text-blPrimary underline">Daftar</a>
                     </div> 
                     @elseif (Route::is('profil'))
                     <div class="relative">
@@ -93,6 +108,19 @@
                                 </a>
                         </div>
                     </div>
+                    @elseif (Route::is('home'))
+                    <div class="menu-home"><!---->
+                        <a href="{{ route('login') }}" class="">
+                            <div class="daftarhome text-white mr-16 align-center hover:text-blDanger">
+                                <span>Login</span>
+                            </div> 
+                        </a>
+                        <a href="{{ route('register') }}" class="">
+                            <div class="daftarhome align-center px-24 py-8 text-white bg-merah hover:bg-white hover:text-blDanger" >
+                                <span>Daftar</span>
+                            </div> 
+                        </a>
+                    </div>
                     @else (Route::is('index'))
                     {{-- <div class="nav-right flex gap-16"> --}}
                     <div class="nav-right flex gap-16 relative">
@@ -103,6 +131,7 @@
                 
         <div class="btn-share  px-12 py-6 select-two">
         <span>Share</span>
+        <svg  xmlns="http://www.w3.org/2000/svg"  width="14"  height="14"  viewBox="0 0 24 24"  fill="none"  stroke="currentColor"  stroke-width="2"  stroke-linecap="round"  stroke-linejoin="round"  class="icon icon-tabler icons-tabler-outline icon-tabler-share"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M18 6m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M18 18m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0" /><path d="M8.7 10.7l6.6 -3.4" /><path d="M8.7 13.3l6.6 3.4" /></svg>
         </div>    
             <div class="group-share rounded-sm popUp absolute z-50 ">
                 <div class="py-24 xs:pb-48 share-base-one"><!----> 
@@ -239,10 +268,13 @@
                                             {{-- <canvas  width="128" height="128" style="height: 100%; width: 100%; position: absolute; inset: 0px; display: flex;"></canvas> --}}
                                         @php
                                             $dataimg = session('dataimg');
-                                            $image = reset($dataimg)['image'] ?? null;
+                                            // $image = reset($dataimg)['image'] ?? null;  jika data dalam benrtuk array
+                                            // reset($dataimg) → Mengambil elemen pertama dari array (baik associative maupun numerik).
+                                            $image = $dataimg['image'] ?? null;
                                         @endphp
+                                 
                                         @if($image)
-                                        <img src="{{ env('API_URL') .'/storage/img/'. $image }}" alt="{{ $image }}" alt="jeddy kosasih" style="height: 100%; width: 100%; inset: 0px;">
+                                        <img src="{{ env('API_URL') .'/storage/img/'. $image }}" alt="{{ $image }}" style="height: 100%; width: 100%; inset: 0px;">
                                         @else
                                         <svg width="16" height="19" viewBox="0 0 16 19" fill="none" xmlns="http://www.w3.org/2000/svg">
                                             <path d="M13.25 10C13.8467 10 14.419 10.2371 14.841 10.659C15.2629 11.081 15.5 11.6533 15.5 12.25V13C15.5 15.9565 12.71 19 8 19C3.29 19 0.5 15.9565 0.5 13V12.25C0.5 11.6533 0.737053 11.081 1.15901 10.659C1.58097 10.2371 2.15326 10 2.75 10H13.25ZM8 0.25C9.09402 0.25 10.1432 0.684597 10.9168 1.45818C11.6904 2.23177 12.125 3.28098 12.125 4.375C12.125 5.46902 11.6904 6.51823 10.9168 7.29182C10.1432 8.0654 9.09402 8.5 8 8.5C6.90598 8.5 5.85677 8.0654 5.08318 7.29182C4.3096 6.51823 3.875 5.46902 3.875 4.375C3.875 3.28098 4.3096 2.23177 5.08318 1.45818C5.85677 0.684597 6.90598 0.25 8 0.25Z" fill="#171717"/>
@@ -291,7 +323,7 @@
                     </div>     
                             <a href="{{ route('profil') }}" class="">
                                 <div class="sub-menu-setup">
-                                    <span>+ Add a new page</span>
+                                    <span>+ Add a new Template</span>
                                     </div>
                                 </a>
                             @if (Route::is('accountsetting'))     
@@ -320,31 +352,27 @@
            
     </div>
 </section>
+
+
 <script>
 
+
 document.addEventListener("DOMContentLoaded", function () {
-    // ✅ Ambil semua elemen toggle dropdown utama dan menu dropdown terkait
-    const dropdownTogglesMain = document.querySelectorAll('.select-none'); // Untuk dropdown utama
+
+    const dropdownTogglesMain = document.querySelectorAll('.select-none'); 
     const dropdownMenusMain = document.querySelectorAll('.menu-setup');
-
-    // ✅ Ambil semua elemen toggle dropdown share dan menu share terkait
-    const dropdownTogglesShare = document.querySelectorAll('.select-two'); // Untuk dropdown share
+    const dropdownTogglesShare = document.querySelectorAll('.select-two'); 
     const dropdownMenusShare = document.querySelectorAll('.group-share');
+    const shareBaseOne = document.querySelector('.share-base-one');
+    const shareBaseTwo = document.querySelector('.share-base-two'); 
+    const shareItem = document.querySelector('.share-item'); 
+    const targetModal = document.querySelector('.back-modal');
 
-    // ✅ Ambil elemen untuk share base
-    const shareBaseOne = document.querySelector('.share-base-one'); // Bagian pertama dari share
-    const shareBaseTwo = document.querySelector('.share-base-two'); // Bagian kedua dari share
-    const shareItem = document.querySelector('.share-item'); // Tombol untuk membuka `share-base-two`
-    const targetModal = document.querySelector('.back-modal'); // Tombol untuk kembali ke `share-base-one`
-
-    // ✅ Sembunyikan semua menu saat halaman dimuat
     dropdownMenusMain.forEach(menu => menu.style.display = 'none');
     dropdownMenusShare.forEach(menu => menu.style.display = 'none');
 
-    if (shareBaseOne) shareBaseOne.style.display = 'block'; // Hanya tampilkan `share-base-one`
-    if (shareBaseTwo) shareBaseTwo.style.display = 'none'; // Sembunyikan `share-base-two`
-
-    // ✅ Fungsi untuk membuka `share-base-two` dan menutup `share-base-one`
+    if (shareBaseOne) shareBaseOne.style.display = 'block'; 
+    if (shareBaseTwo) shareBaseTwo.style.display = 'none'; 
     if (shareItem) {
         shareItem.addEventListener("click", function (e) {
             e.stopPropagation();
@@ -353,7 +381,6 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ✅ Fungsi untuk kembali ke `share-base-one` dari `share-base-two`
     if (targetModal) {
         targetModal.addEventListener("click", function (e) {
             e.stopPropagation();
@@ -362,207 +389,131 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     }
 
-    // ✅ Fungsi toggle dropdown yang fleksibel
     function setupDropdown(toggles, menus, otherMenus) {
         toggles.forEach((toggle, index) => {
             const menu = menus[index];
 
             toggle.addEventListener('click', function (e) {
-                e.stopPropagation(); // Hindari penutupan saat klik di dalam menu
+                e.stopPropagation(); 
 
-                // ✅ Sembunyikan semua menu lainnya, termasuk dari kategori lain
                 [...menus, ...otherMenus].forEach(otherMenu => {
                     if (otherMenu !== menu) {
                         otherMenu.style.display = 'none';
                     }
                 });
 
-                // ✅ Toggle menu yang diklik
                 menu.style.display = (menu.style.display === 'none') ? 'block' : 'none';
             });
         });
     }
 
-    // ✅ Panggil fungsi setupDropdown() untuk masing-masing kategori
     setupDropdown(dropdownTogglesMain, dropdownMenusMain, dropdownMenusShare);
     setupDropdown(dropdownTogglesShare, dropdownMenusShare, dropdownMenusMain);
 
-    // ✅ Tutup semua dropdown/modal jika klik di luar area dropdown atau modal
     document.addEventListener('click', function (e) {
         const isClickInsideDropdown = e.target.closest(".menu-setup, .group-share, .select-none, .select-two, .share-item");
         
         if (!isClickInsideDropdown) {
             dropdownMenusMain.forEach(menu => menu.style.display = 'none');
             dropdownMenusShare.forEach(menu => menu.style.display = 'none');
-            if (shareBaseTwo) shareBaseTwo.style.display = 'none'; // Pastikan `share-base-two` ikut tertutup
+            if (shareBaseTwo) shareBaseTwo.style.display = 'none'; 
         }
     });
 });
 
-       // ✅ Fungsi untuk share via WhatsApp
-function shareViaWhatsApp() {
-const textToShare = document.getElementById("copyText").innerText; // Ambil teks dari elemen
-const userOn = document.querySelector(".user-on").value
-        // const encodedText = encodeURIComponent(`Halo!!! Silahklan Kunjungi tautan ini: ${textToShare}`);
-const message = `Hallo Salam Kenal..!
-Perkenalkan nama saya *${userOn}*
-Silahkan kunjungi link bio saya di bawah ini:
-${textToShare}`;
+    function shareViaWhatsApp() {
+        const textToShare = document.getElementById("copyText").innerText;
+        const userOn = document.querySelector(".user-on").value
+        const message = `Hallo Salam Kenal..!
+        Perkenalkan nama saya *${userOn}*
+        Silahkan kunjungi link bio saya di bawah ini:
+        ${textToShare}`;
 
-const encodedText = encodeURIComponent(message);
-const whatsappURL = `https://wa.me/?text=${encodedText}`;
+        const encodedText = encodeURIComponent(message);
+        const whatsappURL = `https://wa.me/?text=${encodedText}`;
 
-        // 🔥 Buka WhatsApp dengan teks yang sudah dienkode
-window.open(whatsappURL, '_blank');
-}
-function shareViaTelegran() {
-const textToShare = document.getElementById("copyText").innerText; // Ambil teks dari elemen
-const userOn = document.querySelector(".user-on").value
-        // const encodedText = encodeURIComponent(`Halo!!! Silahklan Kunjungi tautan ini: ${textToShare}`);
-const message = `Hallo Salam Kenal..!
-Perkenalkan nama saya *${userOn}*
-Silahkan kunjungi link bio saya di bawah ini:
-${textToShare}`;
+        window.open(whatsappURL, '_blank');
+    }
+    function shareViaTelegran() {
+        const textToShare = document.getElementById("copyText").innerText; 
+        const userOn = document.querySelector(".user-on").value
+        const message = `Hallo Salam Kenal..!
+        Perkenalkan nama saya *${userOn}*
+        Silahkan kunjungi link bio saya di bawah ini:
+        ${textToShare}`;
 
-const encodedText = encodeURIComponent(message);
-// const telegramURL = `https://t.me/share/url?url=${encodeURIComponent(textToShare)}&text=${encodedText}`;
-const telegramURL = `https://t.me/share/url?url=${encodedText}`;
-        // 🔥 Buka WhatsApp dengan teks yang sudah dienkode
-window.open(telegramURL, '_blank');
-}
+        const encodedText = encodeURIComponent(message);
+        const telegramURL = `https://t.me/share/url?url=${encodedText}`;
 
-function shareViafacebook() {
-const textToShare = document.getElementById("copyText").innerText; // Ambil teks dari elemen
-const userOn = document.querySelector(".user-on").value
+        window.open(telegramURL, '_blank');
+    }
 
-const message = `Hallo Salam Kenal..!
-Perkenalkan nama saya *${userOn}*
-Silahkan kunjungi link bio saya di bawah ini:
-${textToShare}`;
+    function shareViafacebook() {
+        const textToShare = document.getElementById("copyText").innerText; 
+        const userOn = document.querySelector(".user-on").value
 
-const encodedText = encodeURIComponent(message);
-const facebookURL = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(textToShare)}`;
+        const message = `Hallo Salam Kenal..!
+        Perkenalkan nama saya *${userOn}*
+        Silahkan kunjungi link bio saya di bawah ini:
+        ${textToShare}`;
+
+        const encodedText = encodeURIComponent(message);
+        const facebookURL = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(textToShare)}`;
+
+        window.open(facebookURL, '_blank');
+    }
+
+    function shareViatwitter() {
+        const textToShare = document.getElementById("copyText").innerText; 
+        const userOn = document.querySelector(".user-on").value
+
+        const message = `Hallo Salam Kenal..!
+        Perkenalkan nama saya *${userOn}*
+        Silahkan kunjungi link bio saya di bawah ini:
+        ${textToShare}`;
+
+        const encodedText = encodeURIComponent(message);
+        const twitterURL = `https://twitter.com/intent/tweet?text=${encodedText}`;
+
+        window.open(twitterURL, '_blank');
+    }
+
+    function shareVialinked() {
+        const textToShare = document.getElementById("copyText").innerText;
+        const userOn = document.querySelector(".user-on").value
+
+        const message = `Hallo Salam Kenal..!
+        Perkenalkan nama saya *${userOn}*
+        Silahkan kunjungi link bio saya di bawah ini:
+        ${textToShare}`;
+
+        const encodedText = encodeURIComponent(message);
+        const linkedinURL = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(textToShare)}&title=${encodeURIComponent(userOn)}`;
+
+        window.open(linkedinURL, '_blank');
+    }
+
+    document.querySelector(".share-wa").addEventListener("click", function () {
+        shareViaWhatsApp();
+    }); 
+    document.querySelector(".share-telegram").addEventListener("click", function () {
+        shareViaTelegran();
+    });
+    document.querySelector(".share-facebook").addEventListener("click", function () {
+        shareViafacebook();
+    });
+    document.querySelector(".share-twitter").addEventListener("click", function () {
+        shareViatwitter();
+    });
+    document.querySelector(".share-linked").addEventListener("click", function () {
+        shareVialinked();
+    });
 
 
-window.open(facebookURL, '_blank');
-}
-function shareViatwitter() {
-const textToShare = document.getElementById("copyText").innerText; // Ambil teks dari elemen
-const userOn = document.querySelector(".user-on").value
-
-const message = `Hallo Salam Kenal..!
-Perkenalkan nama saya *${userOn}*
-Silahkan kunjungi link bio saya di bawah ini:
-${textToShare}`;
-
-const encodedText = encodeURIComponent(message);
-const twitterURL = `https://twitter.com/intent/tweet?text=${encodedText}`;
-
-window.open(twitterURL, '_blank');
-}
-function shareVialinked() {
-const textToShare = document.getElementById("copyText").innerText; // Ambil teks dari elemen
-const userOn = document.querySelector(".user-on").value
-
-const message = `Hallo Salam Kenal..!
-Perkenalkan nama saya *${userOn}*
-Silahkan kunjungi link bio saya di bawah ini:
-${textToShare}`;
-
-const encodedText = encodeURIComponent(message);
-const linkedinURL = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(textToShare)}&title=${encodeURIComponent(userOn)}`;
-
-window.open(linkedinURL, '_blank');
-}
-// ✅ Tambahkan event listener ke elemen share-item untuk share ke WhatsApp
-document.querySelector(".share-wa").addEventListener("click", function () {
-    shareViaWhatsApp();
-}); 
-document.querySelector(".share-telegram").addEventListener("click", function () {
-    shareViaTelegran();
-});
-document.querySelector(".share-facebook").addEventListener("click", function () {
-    shareViafacebook();
-});
-document.querySelector(".share-twitter").addEventListener("click", function () {
-    shareViatwitter();
-});
-document.querySelector(".share-linked").addEventListener("click", function () {
-    shareVialinked();
-});
-// document.addEventListener("DOMContentLoaded", function () {
-//     // ✅ Ambil semua elemen toggle dropdown utama dan menu dropdown terkait
-//     const dropdownTogglesMain = document.querySelectorAll('.select-none'); // Untuk dropdown utama
-//     const dropdownMenusMain = document.querySelectorAll('.menu-setup');
-
-//     // ✅ Ambil semua elemen toggle dropdown share dan menu share terkait
-//     const dropdownTogglesShare = document.querySelectorAll('.select-two'); // Untuk dropdown share
-//     const dropdownMenusShare = document.querySelectorAll('.group-share');
-
-//     const shareBaseOne = document.querySelector('.share-base-one'); // Bagian pertama yang muncul saat klik share
-//     const shareBaseTwo = document.querySelector('.share-base-two'); // Bagian kedua yang muncul setelah klik `share-item`
-//     const shareItem = document.querySelector('.share-item'); // Tombol untuk membuka `share-base-two`
-//     const targetModal = document.querySelector('.back-modal'); 
-    
-//     // ✅ Sembunyikan semua menu saat halaman dimuat
-//     dropdownMenusMain.forEach(menu => menu.style.display = 'none');
-//     dropdownMenusShare.forEach(menu => menu.style.display = 'none');
-
-//   if (shareBaseOne) shareBaseOne.style.display = 'block'; // Hanya tampilkan `share-base-one`
-//     if (shareBaseTwo) shareBaseTwo.style.display = 'none';
-
-  
-//     shareItem.addEventListener("click", function (e) {
-//         e.stopPropagation();
-
-//         shareBaseOne.style.display = 'none';
-//         shareBaseTwo.style.display = 'block';
-//     });
-
-//     targetModal.addEventListener("click", function (e) {
-//         e.stopPropagation();
-
-//         shareBaseOne.style.display = 'block';
-//         shareBaseTwo.style.display = 'none';
-//     });
-//     // ✅ Fungsi toggle dropdown yang fleksibel
-//     function setupDropdown(toggles, menus, otherMenus) {
-//         toggles.forEach((toggle, index) => {
-//             const menu = menus[index];
-
-//             toggle.addEventListener('click', function (e) {
-//                 e.stopPropagation(); // Hindari penutupan saat klik di dalam menu
-
-//                 // ✅ Sembunyikan semua menu lainnya, termasuk dari kategori lain
-//                 [...menus, ...otherMenus].forEach(otherMenu => {
-//                     if (otherMenu !== menu) {
-//                         otherMenu.style.display = 'none';
-//                     }
-//                 });
-
-//                 // ✅ Toggle menu yang diklik
-//                 menu.style.display = (menu.style.display === 'none') ? 'block' : 'none';
-//             });
-//         });
-//     }
-
-//     // ✅ Panggil fungsi setupDropdown() untuk masing-masing kategori
-//     setupDropdown(dropdownTogglesMain, dropdownMenusMain, dropdownMenusShare);
-//     setupDropdown(dropdownTogglesShare, dropdownMenusShare, dropdownMenusMain);
-   
-//     // ✅ Tutup semua dropdown jika klik di luar area dropdown
-//     document.addEventListener('click', function (e) {
-//         [...dropdownMenusMain, ...dropdownMenusShare, ...dropdownSharbase].forEach(menu => {
-//             if (!menu.contains(e.target) && !e.target.closest(".menu-setup, .group-share")) {
-//                 menu.style.display = 'none';
-//             }
-//         });
-//     });
-// });
 function copyToClipboard() {
-    // const textElement = document.getElementById('copyText');
-    const textToCopy = document.getElementById("copyText").innerText; // Ambil nilai dari atribut href
-    // Cek apakah navigator.clipboard didukung
+
+    const textToCopy = document.getElementById("copyText").innerText; 
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
         navigator.clipboard.writeText(textToCopy).then(() => {
             showSuccessMessage();
@@ -570,7 +521,6 @@ function copyToClipboard() {
             console.error('Gagal menyalin teks: ', err);
         });
     } else {
-        // Fallback untuk browser lama
         const tempInput = document.createElement('input');
         tempInput.value = textToCopy;
         document.body.appendChild(tempInput);
@@ -585,7 +535,6 @@ function copyToClipboard() {
     }
 }
 
-// Fungsi untuk menampilkan notifikasi sukses
 function showSuccessMessage() {
     const successcopylink = document.getElementById('copylink');
     successcopylink.innerText = 'Copied';
@@ -593,86 +542,6 @@ function showSuccessMessage() {
         successcopylink.innerText = 'Copy link';
     }, 2000);
 }
-///====================================================
-// document.addEventListener("DOMContentLoaded", function () {
-//     // ✅ Ambil semua elemen toggle dropdown utama dan menu dropdown terkait
-//     const dropdownToggles = document.querySelectorAll('.select-none');
-//     const menus = document.querySelectorAll('.menu-setup');
-
-//     // ✅ Ambil semua elemen toggle dropdown share dan menu share terkait
-//     const dropdownTogglesTwo = document.querySelectorAll('.select-two');
-//     const menuShares = document.querySelectorAll('.group-share');
-
-//     // ✅ Sembunyikan semua menu saat halaman dimuat
-//     menus.forEach(menu => menu.style.display = 'none');
-//     menuShares.forEach(menu => menu.style.display = 'none');
-
-//     // ✅ Fungsi toggle dropdown (umum untuk menu dan share)
-//     function setupDropdown(toggles, menus) {
-//         toggles.forEach((toggle, index) => {
-//             const menu = menus[index];
-
-//             toggle.addEventListener('click', function (e) {
-//                 e.stopPropagation(); // Hindari penutupan saat klik di dalam menu
-
-//                 // Sembunyikan semua menu lainnya
-//                 menus.forEach((otherMenu, otherIndex) => {
-//                     if (otherIndex !== index) {
-//                         otherMenu.style.display = 'none';
-//                     }
-//                 });
-
-//                 // Toggle menu yang diklik
-//                 menu.style.display = (menu.style.display === 'none') ? 'block' : 'none';
-//             });
-//         });
-
-//         // ✅ Tutup semua menu jika klik di luar dropdown
-//         document.addEventListener('click', function (e) {
-//             menus.forEach(menu => {
-//                 if (!menu.contains(e.target) && !e.target.closest(".select-none, .select-two")) {
-//                     menu.style.display = 'none';
-//                 }
-//             });
-//         });
-//     }
-
-//     // ✅ Panggil fungsi untuk masing-masing dropdown
-//     setupDropdown(dropdownToggles, menus);        // Dropdown utama
-//     setupDropdown(dropdownTogglesTwo, menuShares); // Dropdown share
-// });
-
-//============================================================================
-
-    // document.addEventListener("DOMContentLoaded", function () {
-    //     // Ambil elemen dengan class select-none
-    //     const dropdownToggle1 = document.querySelector('.select-none');
-    //     const dropdownToggle2 = document.querySelector('.select-two');
-    //     const menu = document.querySelector('.menu-setup');
-
-    //     // Sembunyikan menu saat halaman dimuat
-    //     menu.style.display = 'none';
-
-    //     // Tambahkan event listener untuk toggle menu
-    //     dropdownToggle.addEventListener('click', function (e) {
-    //         e.stopPropagation(); // Hindari penutupan saat klik di dalam menu
-
-    //         // Toggle menu-setup
-    //         if (menu.style.display === 'none') {
-    //             menu.style.display = 'block';
-    //         } else {
-    //             menu.style.display = 'none';
-    //         }
-    //     });
-
-    //     // Tutup menu jika klik di luar dropdown
-    //     document.addEventListener('click', function (e) {
-    //         if (!dropdownToggle.contains(e.target) && !menu.contains(e.target)) {
-    //             menu.style.display = 'none';
-    //         }
-    //     });
-    // });
-
 
 
 </script>

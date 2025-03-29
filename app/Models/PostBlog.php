@@ -10,6 +10,7 @@ class PostBlog extends Model
     use HasFactory;
     protected $fillable = [
         'profil_id',
+        'section',
         'position', 
         'title',
         'slug', 

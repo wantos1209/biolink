@@ -10,7 +10,8 @@ class Header extends Model
     use HasFactory;
 
     protected $fillable = [
-        'profil_id', 
+        'profil_id',
+        'section',
         'position', 
         'title', 
         'hide', 

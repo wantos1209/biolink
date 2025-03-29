@@ -40,19 +40,15 @@
         @endforeach
 
     </div>
-
-
-
-
-       
+    
             <div class="itemjudul">
                 <span class="page-text-color page-text-font">{{ $slug['title'] }}</span> 
             </div>
+
             <div class="blog-container">
                 <div class="blog-content">
                     {!! $slug['deskripsi'] !!}
                 </div>
-                
             </div>
 
             
@@ -60,15 +56,13 @@
 document.addEventListener("DOMContentLoaded", function () {
     const background_div = document.getElementById("background_div"); 
     const blog = document.querySelector(".blog-container"); 
- // Menjadikan div berada di tengah halaman
-    // blog.style.padding = "20px";  // Memberikan jarak nyaman
-    background_div.style.boxSizing = "border-box"; // Mengatur padding tidak melebihi maxWidth
+
+    background_div.style.boxSizing = "border-box";
 
     blog.style.width = "100%";
     blog.style.maxWidth = "800px";
     blog.style.margin = "0 auto";
 });
-
 
 </script> 
 
